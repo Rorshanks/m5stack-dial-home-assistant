@@ -1,0 +1,268 @@
+image:
+  - file: src/assets/images/light.png   # reuse existing bundled icon; swap for a dedicated switch icon later if you like
+    id: switch_img_onoff
+    type: RGB565
+    transparency: alpha_channel
+    resize: 36x36
+  - file: src/assets/images/light.png
+    id: switch_img_nav
+    type: RGB565
+    transparency: alpha_channel
+    resize: 18x18
+
+font:
+  - file:
+      family: DM+Sans
+      weight: 900
+      type: gfonts
+    id: font_switch_label
+    size: 14
+    bpp: 4
+    glyphs: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .-_%/"
+
+color:
+  - id: col_switch_bg
+    hex: "000000"
+  - id: col_switch_track
+    hex: "282729"
+  - id: col_switch_on
+    hex: "4ADE80"
+  - id: col_switch_label_bg
+    hex: "282729"
+  - id: col_switch_label_text
+    hex: "4ADE80"
+
+globals:
+  - id: in_switches
+    type: bool
+    initial_value: 'false'
+
+script:
+  - id: open_switches
+    then:
+      - if:
+          condition:
+            lambda: 'return id(dial_switches_id).switch_count() > 0;'
+          then:
+            - globals.set: {id: in_switches, value: 'true'}
+            - globals.set: {id: in_menu, value: 'false'}
+            - script.execute: refresh_switches_page
+            - lvgl.page.show:
+                id: page_switches
+                animation: MOVE_LEFT
+
+  - id: close_switches
+    then:
+      - globals.set: {id: in_switches, value: 'false'}
+      - script.execute: open_menu_back
+
+  - id: switches_select_next
+    then:
+      - lambda: 'id(dial_switches_id).select_next();'
+      - script.execute: refresh_switches_page
+
+  - id: switches_select_previous
+    then:
+      - lambda: 'id(dial_switches_id).select_previous();'
+      - script.execute: refresh_switches_page
+
+  - id: toggle_active_switch
+    then:
+      - homeassistant.action:
+          action: switch.toggle
+          data_template:
+            entity_id: "{{ target_entity }}"
+          variables:
+            target_entity: !lambda 'return id(dial_switches_id).active_entity_id();'
+      # Optimistic UI update -- HA's own state push (dial_switches_sensors.yaml) will correct
+      # this shortly after if the toggle didn't actually take, e.g. entity became unavailable.
+      - lambda: |-
+          bool currently_on = id(dial_switches_id).active_is_on();
+          ESP_LOGI("switches", "toggled %s, optimistic new state=%s",
+                   id(dial_switches_id).active_entity_id().c_str(),
+                   (!currently_on) ? "on" : "off");
+      - script.execute: refresh_switches_page
+
+  - id: refresh_switches_page
+    then:
+      - lambda: |-
+          const size_t count = id(dial_switches_id).switch_count();
+          if (count == 0) return;
+
+          const std::string &name = id(dial_switches_id).active_name();
+          lv_label_set_text(id(lbl_switch_title), name.c_str());
+
+          const bool valid = id(dial_switches_id).active_has_valid_state();
+          const bool is_on = id(dial_switches_id).active_is_on();
+
+          if (!valid) {
+            lv_label_set_text(id(lbl_switch_state), "UNAVAILABLE");
+            lv_obj_set_style_bg_color(id(switch_onoff_btn), lv_color_hex(0x000000), LV_STATE_DEFAULT);
+            lv_obj_set_style_border_color(id(switch_onoff_btn), lv_color_hex(0x282729), LV_STATE_DEFAULT);
+            lv_obj_set_style_text_color(id(lbl_switch_state), lv_color_hex(0x6B6B6B), LV_STATE_DEFAULT);
+          } else if (is_on) {
+            lv_label_set_text(id(lbl_switch_state), "ON");
+            lv_obj_set_style_bg_color(id(switch_onoff_btn), lv_color_hex(0x282729), LV_STATE_DEFAULT);
+            lv_obj_set_style_border_color(id(switch_onoff_btn), lv_color_hex(0x4ADE80), LV_STATE_DEFAULT);
+            lv_obj_set_style_border_width(id(switch_onoff_btn), 3, LV_STATE_DEFAULT);
+            lv_obj_set_style_shadow_width(id(switch_onoff_btn), 12, LV_STATE_DEFAULT);
+            lv_obj_set_style_shadow_color(id(switch_onoff_btn), lv_color_hex(0x4ADE80), LV_STATE_DEFAULT);
+            lv_obj_set_style_shadow_opa(id(switch_onoff_btn), LV_OPA_40, LV_STATE_DEFAULT);
+            lv_obj_set_style_text_color(id(lbl_switch_state), lv_color_hex(0x4ADE80), LV_STATE_DEFAULT);
+          } else {
+            lv_label_set_text(id(lbl_switch_state), "OFF");
+            lv_obj_set_style_bg_color(id(switch_onoff_btn), lv_color_hex(0x000000), LV_STATE_DEFAULT);
+            lv_obj_set_style_border_color(id(switch_onoff_btn), lv_color_hex(0x282729), LV_STATE_DEFAULT);
+            lv_obj_set_style_border_width(id(switch_onoff_btn), 2, LV_STATE_DEFAULT);
+            lv_obj_set_style_shadow_width(id(switch_onoff_btn), 8, LV_STATE_DEFAULT);
+            lv_obj_set_style_shadow_color(id(switch_onoff_btn), lv_color_hex(0x262626), LV_STATE_DEFAULT);
+            lv_obj_set_style_shadow_opa(id(switch_onoff_btn), LV_OPA_20, LV_STATE_DEFAULT);
+            lv_obj_set_style_text_color(id(lbl_switch_state), lv_color_hex(0x282729), LV_STATE_DEFAULT);
+          }
+
+          static char posbuf[16];
+          if (count > 1) {
+            snprintf(posbuf, sizeof(posbuf), "%d / %d", (int) id(dial_switches_id).active_index() + 1, (int) count);
+            lv_label_set_text(id(lbl_switch_position), posbuf);
+            lv_obj_clear_flag(id(btn_switch_prev), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_clear_flag(id(btn_switch_next), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_clear_flag(id(lbl_switch_position), LV_OBJ_FLAG_HIDDEN);
+          } else {
+            lv_obj_add_flag(id(btn_switch_prev), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(btn_switch_next), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(lbl_switch_position), LV_OBJ_FLAG_HIDDEN);
+          }
+
+lvgl:
+  pages:
+    - id: page_switches
+      bg_color: col_switch_bg
+      bg_opa: COVER
+      scrollbar_mode: "OFF"
+      on_load:
+        - lambda: lv_obj_clear_flag(lv_scr_act(), LV_OBJ_FLAG_SCROLLABLE);
+        - script.execute: refresh_switches_page
+      widgets:
+        - obj:
+            align: TOP_LEFT
+            x: 0
+            y: 0
+            width: 240
+            height: 240
+            radius: 120
+            clip_corner: true
+            bg_color: col_switch_bg
+            bg_opa: COVER
+            border_width: 0
+            pad_all: 0
+            scrollbar_mode: "OFF"
+            widgets:
+              - obj:
+                  id: switch_title_pill
+                  align: CENTER
+                  x: 0
+                  y: -68
+                  width: 160
+                  height: 22
+                  radius: 15
+                  bg_color: col_switch_label_bg
+                  bg_opa: COVER
+                  border_width: 0
+                  clickable: false
+                  scrollbar_mode: "OFF"
+                  widgets:
+                    - label:
+                        id: lbl_switch_title
+                        align: CENTER
+                        text: "SWITCH"
+                        text_font: font_menu_item
+                        text_color: col_switch_label_text
+                        width: 140
+                        long_mode: DOT
+                        text_align: CENTER
+
+              - obj:
+                  id: switch_onoff_btn
+                  align: CENTER
+                  x: 0
+                  y: 0
+                  width: 130
+                  height: 130
+                  radius: 65
+                  bg_color: col_switch_bg
+                  bg_opa: COVER
+                  border_width: 2
+                  border_color: col_switch_track
+                  border_opa: COVER
+                  shadow_width: 8
+                  shadow_color: 0x262626
+                  shadow_opa: 25%
+                  shadow_spread: 0
+                  clickable: true
+                  scrollbar_mode: "OFF"
+                  scroll_dir: NONE
+                  on_click:
+                    - script.execute: toggle_active_switch
+                  widgets:
+                    - image:
+                        src: switch_img_onoff
+                        align: CENTER
+                        y: -14
+                        clickable: false
+                    - label:
+                        id: lbl_switch_state
+                        align: CENTER
+                        y: 22
+                        text: "OFF"
+                        text_font: font_switch_label
+                        text_color: col_switch_track
+
+              - obj:
+                  id: btn_switch_prev
+                  align: LEFT_MID
+                  x: 8
+                  y: 0
+                  width: 34
+                  height: 34
+                  radius: 17
+                  bg_color: 0x0D1537
+                  bg_opa: COVER
+                  border_width: 0
+                  clickable: true
+                  scrollbar_mode: "OFF"
+                  on_click:
+                    - script.execute: switches_select_previous
+                  widgets:
+                    - image:
+                        src: switch_img_nav
+                        align: CENTER
+                        clickable: false
+
+              - obj:
+                  id: btn_switch_next
+                  align: RIGHT_MID
+                  x: -8
+                  y: 0
+                  width: 34
+                  height: 34
+                  radius: 17
+                  bg_color: 0x0D1537
+                  bg_opa: COVER
+                  border_width: 0
+                  clickable: true
+                  scrollbar_mode: "OFF"
+                  on_click:
+                    - script.execute: switches_select_next
+                  widgets:
+                    - image:
+                        src: switch_img_nav
+                        align: CENTER
+                        clickable: false
+
+              - label:
+                  id: lbl_switch_position
+                  align: BOTTOM_MID
+                  y: -14
+                  text: ""
+                  text_font: font_menu_sub
+                  text_color: col_menu_val
