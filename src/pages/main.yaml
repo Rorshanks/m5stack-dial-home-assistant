@@ -161,8 +161,8 @@ script:
                 condition:
                   lambda: |-
                     return !id(in_menu) && !id(in_light_selector) && !id(in_light)
-                        && !id(in_air) && !id(in_music) && !id(in_timer)
-                        && !id(in_colorpicker);
+        		&& !id(in_air) && !id(in_music) && !id(in_timer)
+        		&& !id(in_colorpicker) && !id(in_switches) && !id(in_fan) && !id(in_fan_lid);
                 then:
                   - script.execute: open_menu
                 else:
@@ -202,8 +202,8 @@ script:
                 condition:
                   lambda: |-
                     return !id(in_menu) && !id(in_light_selector) && !id(in_light)
-                        && !id(in_air) && !id(in_music) && !id(in_timer)
-                        && !id(in_colorpicker);
+        		&& !id(in_air) && !id(in_music) && !id(in_timer)
+        		&& !id(in_colorpicker) && !id(in_switches) && !id(in_fan) && !id(in_fan_lid);
                 then:
                   - script.execute: open_menu
                 else:
@@ -239,7 +239,7 @@ script:
                                               else:
                                                 - if:
                                                     condition:
-                                                      lambda: 'return id(in_air) || id(in_light) || id(in_music);'
+                                                      lambda: 'return id(in_air) || id(in_light) || id(in_music) || id(in_switches) || id(in_fan);'
                                                     then:
                                                       - script.execute: dial_back
 
@@ -270,7 +270,16 @@ script:
                   }
                   return;
                 }
-                if (id(in_colorpicker)) {
+                 if (id(in_fan_lid)) {
+                  id(close_fan_lid).execute();
+                  return;
+                }
+                if (id(in_fan)) {
+                  id(close_fan).execute();
+                  return;
+                }
+                if (id(in_air)) {
+		if (id(in_colorpicker)) {
                   id(close_light).execute();
                   return;
                 }
@@ -341,6 +350,18 @@ sensor:
                               lambda: 'return id(in_light) && !id(in_menu);'
                             then:
                               - script.execute: light_brightness_up
+			    else:
+			      - if:
+				  condition:
+                                  lambda: 'return id(in_fan) && !id(in_menu);'
+                                then:
+                                  - script.execute: fan_speed_up
+                                else:
+                                  - if:
+                                      condition:
+                                        lambda: 'return id(in_air) && !id(in_menu);'
+                                      then:
+                                        ...(existing air branch unchanged, now nested one level deeper)...
                             else:
                               - if:
                                   condition:
@@ -413,6 +434,18 @@ sensor:
                               - script.execute: light_kelvin_down
                             else:
                               - script.execute: light_hue_down
+		     	    else:
+			      - if:
+				  condition:
+                                  lambda: 'return id(in_fan) && !id(in_menu);'
+                                then:
+                                  - script.execute: fan_speed_down
+                                else:
+                                  - if:
+                                      condition:
+                                        lambda: 'return id(in_air) && !id(in_menu);'
+                                      then:
+                                        ...(existing air branch unchanged, now nested one level deeper)...
                       else:
                         - if:
                             condition:

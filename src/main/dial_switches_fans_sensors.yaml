@@ -1,0 +1,47 @@
+# Example bindings for one switch and one MaxxFan-style fan+lid.
+# Copy/repeat this block per entity, same as dial_lights_sensors.yaml does for lights.
+# Update the entity_id values and dial.yaml's dial_switches:/dial_fans: lists to match.
+
+text_sensor:
+  - platform: homeassistant
+    id: dial_switch_pump_state
+    entity_id: switch.water_pump
+    internal: true
+    on_value:
+      - script.execute: menu_on_ha_update
+
+  - platform: homeassistant
+    id: dial_fan_vent_state
+    entity_id: fan.maxxair_vent
+    internal: true
+    on_value:
+      - script.execute: menu_on_ha_update
+
+  - platform: homeassistant
+    id: dial_fan_vent_direction
+    entity_id: fan.maxxair_vent
+    attribute: direction
+    internal: true
+
+  - platform: homeassistant
+    id: dial_fan_lid_state
+    entity_id: cover.maxxair_lid
+    internal: true
+
+sensor:
+  - platform: homeassistant
+    id: dial_fan_vent_percentage
+    entity_id: fan.maxxair_vent
+    attribute: percentage
+    internal: true
+    on_value:
+      - script.execute: menu_on_ha_update
+
+  # Optional -- only include if your MaxxFan lid reports a numeric position (0-100).
+  # If it's open/closed only, delete this block and the lid_position_sensor line
+  # in dial.yaml's dial_fans: entry.
+  - platform: homeassistant
+    id: dial_fan_lid_position
+    entity_id: cover.maxxair_lid
+    attribute: current_position
+    internal: true

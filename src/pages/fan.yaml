@@ -1,0 +1,501 @@
+image:
+  - file: src/assets/images/ac.png   # placeholder -- swap for real fan/direction/lid icons in src/assets/images/
+    id: fan_img_direction
+    type: RGB565
+    transparency: alpha_channel
+    resize: 22x22
+  - file: src/assets/images/ac.png
+    id: fan_img_power
+    type: RGB565
+    transparency: alpha_channel
+    resize: 20x20
+  - file: src/assets/images/ac.png
+    id: fan_img_power_big
+    type: RGB565
+    transparency: alpha_channel
+    resize: 36x36
+  - file: src/assets/images/ac.png
+    id: fan_img_lid
+    type: RGB565
+    transparency: alpha_channel
+    resize: 18x18
+
+font:
+  - file:
+      family: DM+Sans
+      weight: 900
+      type: gfonts
+    id: font_fan_big
+    size: 59
+    bpp: 4
+    glyphs: "0123456789"
+
+  - file: "gfonts://DM+Sans"
+    id: font_fan_pct
+    size: 24
+    bpp: 4
+    glyphs: "%"
+
+  - file:
+      family: DM+Sans
+      weight: 900
+      type: gfonts
+    id: font_fan_label
+    size: 14
+    bpp: 4
+    glyphs: "ABCDEFGHIJKLMNOPQRSTUVWXYZ "
+
+color:
+  - id: col_fan_bg
+    hex: "000000"
+  - id: col_fan_track
+    hex: "282729"
+  - id: col_fan_accent
+    hex: "5ABBFD"
+  - id: col_fan_label_bg
+    hex: "282729"
+  - id: col_fan_label_text
+    hex: "5ABBFD"
+
+globals:
+  - id: in_fan
+    type: bool
+    initial_value: 'false'
+  - id: in_fan_lid
+    type: bool
+    initial_value: 'false'
+  - id: fan_on
+    type: bool
+    initial_value: 'false'
+  - id: fan_percent
+    type: int
+    initial_value: '50'
+  - id: fan_requested_percent
+    type: int
+    initial_value: '50'
+  - id: fan_user_adjusting
+    type: bool
+    initial_value: 'false'
+  - id: fan_direction_reverse
+    type: bool
+    initial_value: 'false'
+  - id: fan_has_lid
+    type: bool
+    initial_value: 'false'
+  - id: fan_lid_is_open
+    type: bool
+    initial_value: 'false'
+
+script:
+  # ---- open / close ----
+  - id: open_fan
+    then:
+      - if:
+          condition:
+            lambda: 'return id(dial_fans_id).fan_count() > 0;'
+          then:
+            - globals.set: {id: in_fan, value: 'true'}
+            - globals.set: {id: in_menu, value: 'false'}
+            - lambda: |-
+                id(fan_on) = id(dial_fans_id).active_has_valid_state() && id(dial_fans_id).active_is_on();
+                if (id(dial_fans_id).active_percent_valid()) {
+                  id(fan_percent) = id(dial_fans_id).active_percent();
+                  id(fan_requested_percent) = id(fan_percent);
+                }
+                id(fan_direction_reverse) = id(dial_fans_id).active_direction_valid() &&
+                                             id(dial_fans_id).active_direction_reverse();
+                id(fan_has_lid) = id(dial_fans_id).active_has_lid();
+                id(fan_lid_is_open) = id(dial_fans_id).active_lid_state() == esphome::dial_fans::LidState::OPEN;
+            - script.execute: refresh_fan_page
+            - lvgl.page.show:
+                id: page_fan
+                animation: MOVE_LEFT
+
+  - id: close_fan
+    then:
+      - globals.set: {id: in_fan, value: 'false'}
+      - globals.set: {id: in_fan_lid, value: 'false'}
+      - script.execute: open_menu_back
+
+  # ---- speed (encoder-driven, mirrors light_brightness_up/down) ----
+  - id: fan_speed_up
+    then:
+      - lambda: |-
+          int v = id(fan_percent) + 5;
+          if (v > 100) v = 100;
+          id(fan_percent) = v;
+          id(fan_requested_percent) = v;
+          id(fan_user_adjusting) = true;
+      - script.execute: refresh_fan_page
+      - script.execute: queue_fan_percent
+
+  - id: fan_speed_down
+    then:
+      - lambda: |-
+          int v = id(fan_percent) - 5;
+          if (v < 0) v = 0;
+          id(fan_percent) = v;
+          id(fan_requested_percent) = v;
+          id(fan_user_adjusting) = true;
+      - script.execute: refresh_fan_page
+      - script.execute: queue_fan_percent
+
+  - id: queue_fan_percent
+    mode: restart
+    then:
+      - delay: 250ms
+      - homeassistant.action:
+          action: fan.set_percentage
+          data_template:
+            entity_id: "{{ target_entity }}"
+            percentage: "{{ pct | int }}"
+          variables:
+            target_entity: !lambda 'return id(dial_fans_id).active_entity_id();'
+            pct: !lambda 'return id(fan_requested_percent);'
+      - lambda: 'id(fan_user_adjusting) = false;'
+
+  # ---- on/off ----
+  - id: toggle_fan_onoff
+    then:
+      - lambda: 'id(fan_on) = !id(fan_on);'
+      - homeassistant.action:
+          action: "{{ 'fan.turn_on' if is_on else 'fan.turn_off' }}"
+          data_template:
+            entity_id: "{{ target_entity }}"
+          variables:
+            target_entity: !lambda 'return id(dial_fans_id).active_entity_id();'
+            is_on: !lambda 'return id(fan_on);'
+      - script.execute: refresh_fan_page
+
+  # ---- direction ----
+  - id: toggle_fan_direction
+    then:
+      - lambda: 'id(fan_direction_reverse) = !id(fan_direction_reverse);'
+      - homeassistant.action:
+          action: fan.set_direction
+          data_template:
+            entity_id: "{{ target_entity }}"
+            direction: "{{ 'reverse' if reverse else 'forward' }}"
+          variables:
+            target_entity: !lambda 'return id(dial_fans_id).active_entity_id();'
+            reverse: !lambda 'return id(fan_direction_reverse);'
+      - script.execute: refresh_fan_page
+
+  # ---- lid sub-page ----
+  - id: open_fan_lid
+    then:
+      - if:
+          condition:
+            lambda: 'return id(fan_has_lid);'
+          then:
+            - globals.set: {id: in_fan, value: 'false'}
+            - globals.set: {id: in_fan_lid, value: 'true'}
+            - script.execute: refresh_fan_lid_page
+            - lvgl.page.show:
+                id: page_fan_lid
+                animation: MOVE_LEFT
+
+  - id: close_fan_lid
+    then:
+      - globals.set: {id: in_fan_lid, value: 'false'}
+      - globals.set: {id: in_fan, value: 'true'}
+      - lvgl.page.show:
+          id: page_fan
+          animation: MOVE_RIGHT
+
+  - id: toggle_fan_lid
+    then:
+      - lambda: 'id(fan_lid_is_open) = !id(fan_lid_is_open);'
+      - homeassistant.action:
+          action: "{{ 'cover.open_cover' if opening else 'cover.close_cover' }}"
+          data_template:
+            entity_id: "{{ target_entity }}"
+          variables:
+            target_entity: !lambda 'return id(dial_fans_id).active_lid_entity_id();'
+            opening: !lambda 'return id(fan_lid_is_open);'
+      - script.execute: refresh_fan_lid_page
+
+  - id: refresh_fan_lid_page
+    then:
+      - lambda: |-
+          if (id(fan_lid_is_open)) {
+            lv_label_set_text(id(lbl_lid_state), "OPEN");
+            lv_obj_set_style_bg_color(id(fan_lid_btn), lv_color_hex(0x282729), LV_STATE_DEFAULT);
+            lv_obj_set_style_border_color(id(fan_lid_btn), lv_color_hex(0x5ABBFD), LV_STATE_DEFAULT);
+            lv_obj_set_style_text_color(id(lbl_lid_state), lv_color_hex(0x5ABBFD), LV_STATE_DEFAULT);
+          } else {
+            lv_label_set_text(id(lbl_lid_state), "CLOSED");
+            lv_obj_set_style_bg_color(id(fan_lid_btn), lv_color_hex(0x000000), LV_STATE_DEFAULT);
+            lv_obj_set_style_border_color(id(fan_lid_btn), lv_color_hex(0x282729), LV_STATE_DEFAULT);
+            lv_obj_set_style_text_color(id(lbl_lid_state), lv_color_hex(0x282729), LV_STATE_DEFAULT);
+          }
+
+  # ---- render ----
+  - id: refresh_fan_page
+    then:
+      - lambda: |-
+          static char buf[4];
+          snprintf(buf, sizeof(buf), "%d", id(fan_percent));
+          lv_label_set_text(id(lbl_fan_num), buf);
+          lv_obj_update_layout(id(lbl_fan_num));
+          lv_coord_t nw = lv_obj_get_width(id(lbl_fan_num));
+          int pct_w = 16, gap = 3;
+          int pair_x = 120 - (nw + gap + pct_w) / 2;
+          lv_obj_set_x(id(lbl_fan_num), pair_x);
+          lv_obj_set_x(id(lbl_fan_pct), pair_x + nw + gap);
+
+          if (id(fan_on)) {
+            lv_obj_set_style_border_color(id(btn_fan_power), lv_color_hex(0x5ABBFD), LV_STATE_DEFAULT);
+            lv_obj_set_style_shadow_color(id(btn_fan_power), lv_color_hex(0x5ABBFD), LV_STATE_DEFAULT);
+            lv_obj_clear_flag(id(fan_arc), LV_OBJ_FLAG_HIDDEN);
+          } else {
+            lv_obj_set_style_border_color(id(btn_fan_power), lv_color_hex(0x262626), LV_STATE_DEFAULT);
+            lv_obj_set_style_shadow_color(id(btn_fan_power), lv_color_hex(0x262626), LV_STATE_DEFAULT);
+          }
+
+          lv_obj_set_style_img_recolor(id(fan_img_direction_obj),
+              id(fan_direction_reverse) ? lv_color_hex(0x5ABBFD) : lv_color_hex(0xFFFFFF), LV_PART_MAIN);
+
+          if (id(fan_has_lid)) {
+            lv_obj_clear_flag(id(btn_fan_lid), LV_OBJ_FLAG_HIDDEN);
+          } else {
+            lv_obj_add_flag(id(btn_fan_lid), LV_OBJ_FLAG_HIDDEN);
+          }
+      - lvgl.arc.update:
+          id: fan_arc
+          value: !lambda "return id(fan_percent);"
+
+lvgl:
+  pages:
+    - id: page_fan
+      bg_color: col_fan_bg
+      bg_opa: COVER
+      scrollbar_mode: "OFF"
+      on_load:
+        - lambda: lv_obj_clear_flag(lv_scr_act(), LV_OBJ_FLAG_SCROLLABLE);
+        - script.execute: refresh_fan_page
+      widgets:
+        - obj:
+            align: TOP_LEFT
+            x: 0
+            y: 0
+            width: 240
+            height: 240
+            radius: 120
+            clip_corner: true
+            bg_color: col_fan_bg
+            bg_opa: COVER
+            border_width: 0
+            pad_all: 0
+            scrollbar_mode: "OFF"
+            widgets:
+              - arc:
+                  id: fan_arc
+                  x: 17
+                  y: 17
+                  width: 205
+                  height: 205
+                  rotation: 90
+                  start_angle: 55
+                  end_angle: 305
+                  value: 50
+                  min_value: 0
+                  max_value: 100
+                  arc_color: col_fan_track
+                  arc_width: 20
+                  arc_opa: COVER
+                  arc_rounded: true
+                  adjustable: false
+                  clickable: false
+                  indicator:
+                    arc_color: col_fan_accent
+                    arc_width: 20
+                    arc_opa: COVER
+                    arc_rounded: true
+                  knob:
+                    bg_color: 0xFFFFFF
+                    bg_opa: COVER
+                    border_width: 0
+                    width: 16
+                    height: 16
+                    radius: 8
+
+              - label:
+                  id: lbl_fan_num
+                  x: 72
+                  y: 65
+                  text: "50"
+                  text_font: font_fan_big
+                  text_color: 0xFFFFFF
+
+              - label:
+                  id: lbl_fan_pct
+                  x: 152
+                  y: 95
+                  text: "%"
+                  text_font: font_fan_pct
+                  text_color: col_fan_accent
+
+              - obj:
+                  id: fan_title_pill
+                  x: 81
+                  y: 143
+                  width: 116
+                  height: 22
+                  radius: 15
+                  bg_color: col_fan_label_bg
+                  bg_opa: COVER
+                  border_width: 0
+                  clickable: false
+                  scrollbar_mode: "OFF"
+                  widgets:
+                    - label:
+                        align: CENTER
+                        text: "FAN"
+                        text_font: font_menu_item
+                        text_color: col_fan_label_text
+
+              - obj:
+                  id: btn_fan_direction
+                  x: 61
+                  y: 177
+                  width: 36
+                  height: 36
+                  radius: 18
+                  bg_color: col_fan_bg
+                  bg_opa: COVER
+                  border_width: 2
+                  border_color: col_fan_track
+                  border_opa: COVER
+                  clickable: true
+                  scrollbar_mode: "OFF"
+                  scroll_dir: NONE
+                  on_click:
+                    - script.execute: toggle_fan_direction
+                  widgets:
+                    - image:
+                        id: fan_img_direction_obj
+                        src: fan_img_direction
+                        align: CENTER
+                        clickable: false
+
+              - obj:
+                  id: btn_fan_power
+                  x: 123
+                  y: 177
+                  width: 36
+                  height: 36
+                  radius: 18
+                  bg_color: col_fan_bg
+                  bg_opa: COVER
+                  border_width: 2
+                  border_color: col_fan_track
+                  border_opa: COVER
+                  shadow_width: 8
+                  shadow_color: col_fan_track
+                  shadow_opa: 25%
+                  shadow_spread: 0
+                  clickable: true
+                  scrollbar_mode: "OFF"
+                  scroll_dir: NONE
+                  on_click:
+                    - script.execute: toggle_fan_onoff
+                  widgets:
+                    - image:
+                        src: fan_img_power
+                        align: CENTER
+                        clickable: false
+
+              - obj:
+                  id: btn_fan_lid
+                  align: TOP_RIGHT
+                  x: -8
+                  y: 8
+                  width: 34
+                  height: 34
+                  radius: 17
+                  bg_color: col_fan_label_bg
+                  bg_opa: COVER
+                  border_width: 0
+                  clickable: true
+                  scrollbar_mode: "OFF"
+                  hidden: true
+                  on_click:
+                    - script.execute: open_fan_lid
+                  widgets:
+                    - image:
+                        src: fan_img_lid
+                        align: CENTER
+                        clickable: false
+
+    - id: page_fan_lid
+      bg_color: col_fan_bg
+      bg_opa: COVER
+      scrollbar_mode: "OFF"
+      on_load:
+        - lambda: lv_obj_clear_flag(lv_scr_act(), LV_OBJ_FLAG_SCROLLABLE);
+        - script.execute: refresh_fan_lid_page
+      widgets:
+        - obj:
+            align: TOP_LEFT
+            x: 0
+            y: 0
+            width: 240
+            height: 240
+            radius: 120
+            clip_corner: true
+            bg_color: col_fan_bg
+            bg_opa: COVER
+            border_width: 0
+            pad_all: 0
+            scrollbar_mode: "OFF"
+            widgets:
+              - obj:
+                  x: 61
+                  y: 32
+                  width: 118
+                  height: 22
+                  radius: 15
+                  bg_color: col_fan_label_bg
+                  bg_opa: COVER
+                  border_width: 0
+                  clickable: false
+                  scrollbar_mode: "OFF"
+                  widgets:
+                    - label:
+                        align: CENTER
+                        text: "VENT LID"
+                        text_font: font_menu_item
+                        text_color: col_fan_label_text
+
+              - obj:
+                  id: fan_lid_btn
+                  align: CENTER
+                  x: 0
+                  y: 0
+                  width: 130
+                  height: 130
+                  radius: 65
+                  bg_color: col_fan_bg
+                  bg_opa: COVER
+                  border_width: 2
+                  border_color: col_fan_track
+                  border_opa: COVER
+                  clickable: true
+                  scrollbar_mode: "OFF"
+                  scroll_dir: NONE
+                  on_click:
+                    - script.execute: toggle_fan_lid
+                  widgets:
+                    - image:
+                        src: fan_img_lid
+                        align: CENTER
+                        y: -14
+                        clickable: false
+                    - label:
+                        id: lbl_lid_state
+                        align: CENTER
+                        y: 22
+                        text: "CLOSED"
+                        text_font: font_fan_label
+                        text_color: col_fan_track

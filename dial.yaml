@@ -4,21 +4,23 @@ packages:
   entities:      !include src/main/entities.yaml
   entities_demo: !include src/main/entities_demo.yaml
   dial_lights_sensors: !include src/main/dial_lights_sensors.yaml
+  dial_switches_fans_sensors: !include src/main/dial_switches_fans_sensors.yaml
   load_page:   !include src/pages/load.yaml
   clock_page:  !include src/pages/main.yaml
   menu_page:   !include src/pages/menu.yaml
   light_page:  !include src/pages/light.yaml
   light_selector_page: !include src/pages/light_selector.yaml
   switches_page: !include src/pages/switches.yaml
+  fan_page:      !include src/pages/fan.yaml
   air_page:    !include src/pages/air.yaml
   music_page:  !include src/pages/music.yaml
   timer_page:  !include src/pages/timer.yaml
   idle:        !include src/main/idle.yaml
 
 external_components:
-  - source: github://hectorzin/m5stack-dial-home-assistant@main
-    components: [dial_lights, dial_carousel]
-    refresh: 0s
+      - source: github://rorshanks/m5stack-dial-home-assistant@main
+        components: [dial_lights, dial_carousel, dial_switches, dial_fans]
+        refresh: 0s
 
 dial_lights:
   - entity_id: light.sofa
@@ -51,6 +53,20 @@ dial_lights:
     color_temp_kelvin_sensor: dial_light_jardin_color_temp_kelvin
     min_color_temp_kelvin_sensor: dial_light_jardin_min_color_temp_kelvin
     max_color_temp_kelvin_sensor: dial_light_jardin_max_color_temp_kelvin
+
+dial_switches:
+      - entity_id: switch.water_pump
+        name: Water Pump
+        state_sensor: dial_switch_pump_state
+
+dial_fans:
+      - entity_id: fan.maxxair_vent
+        name: Vent Fan
+        state_sensor: dial_fan_vent_state
+        percentage_sensor: dial_fan_vent_percentage
+        direction_sensor: dial_fan_vent_direction
+        lid_entity_id: cover.maxxair_lid
+        lid_state_sensor: dial_fan_lid_state
 
 substitutions:
   timezone: Europe/Madrid

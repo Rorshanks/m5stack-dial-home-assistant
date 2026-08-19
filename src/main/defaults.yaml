@@ -1,2 +1,4 @@
 # Default empty lights list when dial_lights is omitted from the user config.
 dial_lights: []
+dial_switches: []
+dial_fans: []
