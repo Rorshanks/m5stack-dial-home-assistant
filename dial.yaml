@@ -9,6 +9,7 @@ packages:
   menu_page:   !include src/pages/menu.yaml
   light_page:  !include src/pages/light.yaml
   light_selector_page: !include src/pages/light_selector.yaml
+  switches_page: !include src/pages/switches.yaml
   air_page:    !include src/pages/air.yaml
   music_page:  !include src/pages/music.yaml
   timer_page:  !include src/pages/timer.yaml
