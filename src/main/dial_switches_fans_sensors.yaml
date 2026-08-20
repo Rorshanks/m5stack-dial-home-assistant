@@ -40,8 +40,8 @@ sensor:
   # Optional -- only include if your MaxxFan lid reports a numeric position (0-100).
   # If it's open/closed only, delete this block and the lid_position_sensor line
   # in dial.yaml's dial_fans: entry.
-  - platform: homeassistant
-    id: dial_fan_lid_position
-    entity_id: cover.maxxair_lid
-    attribute: current_position
-    internal: true
+  #- platform: homeassistant
+  #  id: dial_fan_lid_position
+  #  entity_id: cover.maxxair_lid
+  #  attribute: current_position
+  #  internal: true
