@@ -167,7 +167,7 @@ script:
           id(in_air) = false;
           id(in_music) = false;
           id(in_timer) = false;
-	  id(in_switches) = false;
+          id(in_switches) = false;
           id(in_fan) = false;
           id(in_fan_lid) = false;
 
