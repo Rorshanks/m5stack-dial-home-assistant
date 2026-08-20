@@ -5,33 +5,33 @@
 text_sensor:
   - platform: homeassistant
     id: dial_switch_pump_state
-    entity_id: switch.water_pump
+    entity_id: switch.dummy_switch
     internal: true
     on_value:
       - script.execute: menu_on_ha_update
 
   - platform: homeassistant
     id: dial_fan_vent_state
-    entity_id: fan.maxxair_vent
+    entity_id: fan.dummy_fan
     internal: true
     on_value:
       - script.execute: menu_on_ha_update
 
   - platform: homeassistant
     id: dial_fan_vent_direction
-    entity_id: fan.maxxair_vent
+    entity_id: fan.dummy_fan
     attribute: direction
     internal: true
 
   - platform: homeassistant
     id: dial_fan_lid_state
-    entity_id: cover.maxxair_lid
+    entity_id: cover.dummy_fan
     internal: true
 
 sensor:
   - platform: homeassistant
     id: dial_fan_vent_percentage
-    entity_id: fan.maxxair_vent
+    entity_id: fan.dummy_fan
     attribute: percentage
     internal: true
     on_value:

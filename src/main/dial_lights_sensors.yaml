@@ -1,7 +1,7 @@
 text_sensor:
   - platform: homeassistant
-    id: dial_light_sofa_state
-    entity_id: light.sofa
+    id: dial_light_dummy_light_state
+    entity_id: light.dummy_light
     internal: true
     on_value:
       - script.execute: menu_on_ha_update
@@ -21,8 +21,8 @@ text_sensor:
       - script.execute: menu_on_ha_update
 
   - platform: homeassistant
-    id: dial_light_sofa_modes
-    entity_id: light.sofa
+    id: dial_light_dummy_light_modes
+    entity_id: light.dummy_light
     attribute: supported_color_modes
     internal: true
 
@@ -39,8 +39,8 @@ text_sensor:
     internal: true
 
   - platform: homeassistant
-    id: dial_light_sofa_rgb
-    entity_id: light.sofa
+    id: dial_light_dummy_light_rgb
+    entity_id: light.dummy_light
     attribute: rgb_color
     internal: true
 
@@ -57,7 +57,7 @@ text_sensor:
     internal: true
 
   - platform: homeassistant
-    id: dial_light_sofa_color_mode
+    id: dial_light_dummy_light_color_mode
     entity_id: light.sofa
     attribute: color_mode
     internal: true
@@ -76,8 +76,8 @@ text_sensor:
 
 sensor:
   - platform: homeassistant
-    id: dial_light_sofa_brightness
-    entity_id: light.sofa
+    id: dial_light_dummy_light_brightness
+    entity_id: light.dummy_light
     attribute: brightness
     internal: true
     on_value:
@@ -100,8 +100,8 @@ sensor:
       - script.execute: menu_on_ha_update
 
   - platform: homeassistant
-    id: dial_light_sofa_color_temp_kelvin
-    entity_id: light.sofa
+    id: dial_light_dummy_light_color_temp_kelvin
+    entity_id: light.dummy_light
     attribute: color_temp_kelvin
     internal: true
 
@@ -118,8 +118,8 @@ sensor:
     internal: true
 
   - platform: homeassistant
-    id: dial_light_sofa_min_color_temp_kelvin
-    entity_id: light.sofa
+    id: dial_light_dummy_light_min_color_temp_kelvin
+    entity_id: light.dummy_light
     attribute: min_color_temp_kelvin
     internal: true
 
@@ -136,8 +136,8 @@ sensor:
     internal: true
 
   - platform: homeassistant
-    id: dial_light_sofa_max_color_temp_kelvin
-    entity_id: light.sofa
+    id: dial_light_dummy_light_max_color_temp_kelvin
+    entity_id: light.dummy_light
     attribute: max_color_temp_kelvin
     internal: true
 
