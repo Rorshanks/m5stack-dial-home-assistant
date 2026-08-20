@@ -53,6 +53,16 @@ image:
     type: RGB565
     transparency: alpha_channel
     resize: 34x34
+  - file: src/assets/images/light.png   # placeholder -- swap for a dedicated switch icon
+    id: menu_img_switch
+    type: RGB565
+    transparency: alpha_channel
+    resize: 34x34
+  - file: src/assets/images/ac.png      # placeholder -- swap for a dedicated fan icon
+    id: menu_img_fan
+    type: RGB565
+    transparency: alpha_channel
+    resize: 32x32
   - file: src/assets/images/timer.png
     id: menu_img_timer
     type: RGB565
@@ -69,7 +79,7 @@ globals:
     initial_value: '0'
   - id: menu_func
     type: int
-    initial_value: '4'
+    initial_value: '6'
   - id: in_menu
     type: bool
     initial_value: 'false'
@@ -105,17 +115,21 @@ script:
   - id: menu_sync_selection
     then:
       - lambda: |-
-          int items[5];
+          int items[7];
           int n = 0;
           if (strcmp("${timer_entity}", "timer.your_timer") != 0)
             items[n++] = 0;
           if (id(dial_lights_id).light_count() > 0)
             items[n++] = 1;
-          if (strcmp("${climate_entity}", "climate.your_ac") != 0)
+          if (id(dial_switches_id).switch_count() > 0)
             items[n++] = 2;
-          if (strcmp("${music_player_entity}", "media_player.your_player") != 0)
+          if (id(dial_fans_id).fan_count() > 0)
             items[n++] = 3;
-          items[n++] = 4;
+          if (strcmp("${climate_entity}", "climate.your_ac") != 0)
+            items[n++] = 4;
+          if (strcmp("${music_player_entity}", "media_player.your_player") != 0)
+            items[n++] = 5;
+          items[n++] = 6;
 
           const int home_idx = n - 1;
           bool found = false;
@@ -127,7 +141,7 @@ script:
             }
           }
           if (!found) {
-            id(menu_func) = 4;
+            id(menu_func) = 6;
             id(menu_sel) = home_idx;
           }
 
@@ -167,17 +181,21 @@ script:
                 lv_obj_add_flag(id(menu_arrow), LV_OBJ_FLAG_HIDDEN);
 
                 auto on_ready = +[](void *ctx) {
-                  int local_items[5];
+                  int local_items[7];
                   int local_n = 0;
                   if (strcmp("${timer_entity}", "timer.your_timer") != 0)
                     local_items[local_n++] = 0;
                   if (id(dial_lights_id).light_count() > 0)
                     local_items[local_n++] = 1;
-                  if (strcmp("${climate_entity}", "climate.your_ac") != 0)
+                  if (id(dial_switches_id).switch_count() > 0)
                     local_items[local_n++] = 2;
-                  if (strcmp("${music_player_entity}", "media_player.your_player") != 0)
+                  if (id(dial_fans_id).fan_count() > 0)
                     local_items[local_n++] = 3;
-                  local_items[local_n++] = 4;
+                  if (strcmp("${climate_entity}", "climate.your_ac") != 0)
+                    local_items[local_n++] = 4;
+                  if (strcmp("${music_player_entity}", "media_player.your_player") != 0)
+                    local_items[local_n++] = 5;
+                  local_items[local_n++] = 6;
 
                   id(menu_sel) = ((id(menu_sel) - 1) % local_n + local_n) % local_n;
                   id(menu_func) = local_items[id(menu_sel)];
@@ -200,17 +218,21 @@ script:
                 lv_obj_add_flag(id(menu_arrow), LV_OBJ_FLAG_HIDDEN);
 
                 auto on_ready = +[](void *ctx) {
-                  int local_items[5];
+                  int local_items[7];
                   int local_n = 0;
                   if (strcmp("${timer_entity}", "timer.your_timer") != 0)
                     local_items[local_n++] = 0;
                   if (id(dial_lights_id).light_count() > 0)
                     local_items[local_n++] = 1;
-                  if (strcmp("${climate_entity}", "climate.your_ac") != 0)
+                  if (id(dial_switches_id).switch_count() > 0)
                     local_items[local_n++] = 2;
-                  if (strcmp("${music_player_entity}", "media_player.your_player") != 0)
+                  if (id(dial_fans_id).fan_count() > 0)
                     local_items[local_n++] = 3;
-                  local_items[local_n++] = 4;
+                  if (strcmp("${climate_entity}", "climate.your_ac") != 0)
+                    local_items[local_n++] = 4;
+                  if (strcmp("${music_player_entity}", "media_player.your_player") != 0)
+                    local_items[local_n++] = 5;
+                  local_items[local_n++] = 6;
 
                   id(menu_sel) = (id(menu_sel) + 1) % local_n;
                   id(menu_func) = local_items[id(menu_sel)];
@@ -241,12 +263,26 @@ script:
               }
               break;
             case 2:
-              id(open_air).execute();
+              if (id(dial_switches_id).switch_count() > 0) {
+                id(open_switches).execute();
+              } else {
+                ESP_LOGW("menu", "Switches selected but dial_switches is empty");
+              }
               break;
             case 3:
-              id(open_music).execute();
+              if (id(dial_fans_id).fan_count() > 0) {
+                id(open_fan).execute();
+              } else {
+                ESP_LOGW("menu", "Fan selected but dial_fans is empty");
+              }
               break;
             case 4:
+              id(open_air).execute();
+              break;
+            case 5:
+              id(open_music).execute();
+              break;
+            case 6:
             default:
               id(close_menu).execute();
               break;
@@ -264,8 +300,8 @@ script:
     then:
       - lambda: |-
           static char subbuf[64];
-          const uint32_t ACCENT_COLORS[5] = {
-            0xFB923C, 0xFDC003, 0x5ABBFD, 0xA792E8, 0x576BFE
+          const uint32_t ACCENT_COLORS[7] = {
+            0xFB923C, 0xFDC003, 0x4ADE80, 0x5ABBFD, 0x5ABBFD, 0xA792E8, 0x576BFE
           };
 
           auto format_time_short = [](int seconds, char *buf, size_t len) {
@@ -351,6 +387,52 @@ script:
               break;
             }
             case 2: {
+              const size_t count = id(dial_switches_id).switch_count();
+              if (count == 0) {
+                snprintf(subbuf, sizeof(subbuf), "Unavailable");
+                break;
+              }
+              if (count == 1) {
+                if (!id(dial_switches_id).active_has_valid_state()) {
+                  snprintf(subbuf, sizeof(subbuf), "Unavailable");
+                } else {
+                  snprintf(subbuf, sizeof(subbuf), id(dial_switches_id).active_is_on() ? "On" : "Off");
+                }
+                break;
+              }
+              size_t on_count = 0;
+              bool any_valid = false;
+              for (size_t i = 0; i < count; i++) {
+                const auto snap = id(dial_switches_id).card_snapshot_at(i);
+                if (snap.state_valid) {
+                  any_valid = true;
+                  if (snap.is_on) on_count++;
+                }
+              }
+              if (!any_valid) {
+                snprintf(subbuf, sizeof(subbuf), "Unavailable");
+              } else if (on_count == 0) {
+                snprintf(subbuf, sizeof(subbuf), "All off");
+              } else if (on_count == count) {
+                snprintf(subbuf, sizeof(subbuf), "All on");
+              } else {
+                snprintf(subbuf, sizeof(subbuf), "%d of %d on", (int) on_count, (int) count);
+              }
+              break;
+            }
+            case 3: {
+              if (id(dial_fans_id).fan_count() == 0 || !id(dial_fans_id).active_has_valid_state()) {
+                snprintf(subbuf, sizeof(subbuf), "Unavailable");
+              } else if (!id(dial_fans_id).active_is_on()) {
+                snprintf(subbuf, sizeof(subbuf), "Off");
+              } else if (id(dial_fans_id).active_percent_valid()) {
+                snprintf(subbuf, sizeof(subbuf), "On \xc2\xb7 %d%%", id(dial_fans_id).active_percent());
+              } else {
+                snprintf(subbuf, sizeof(subbuf), "On");
+              }
+              break;
+            }
+            case 4: {
               auto format_setpoint = [](float t, char *buf, size_t len) -> bool {
                 if (isnan(t)) return false;
                 const float rounded = roundf(t);
@@ -405,7 +487,7 @@ script:
                 snprintf(subbuf, sizeof(subbuf), "Unavailable");
               break;
             }
-            case 3: {
+            case 5: {
               if (!id(media_player_status).has_state() || is_invalid_state(id(media_player_status).state)) {
                 snprintf(subbuf, sizeof(subbuf), "Unavailable");
                 break;
@@ -429,7 +511,7 @@ script:
               }
               break;
             }
-            case 4:
+            case 6:
             default:
               snprintf(subbuf, sizeof(subbuf), "Clock");
               break;
@@ -446,17 +528,21 @@ script:
       - lambda: |-
           static constexpr int OFFSETS[5] = {-2, -1, 0, 1, 2};
 
-          int items[5];
+          int items[7];
           int n = 0;
           if (strcmp("${timer_entity}", "timer.your_timer") != 0)
             items[n++] = 0;
           if (id(dial_lights_id).light_count() > 0)
             items[n++] = 1;
-          if (strcmp("${climate_entity}", "climate.your_ac") != 0)
+          if (id(dial_switches_id).switch_count() > 0)
             items[n++] = 2;
-          if (strcmp("${music_player_entity}", "media_player.your_player") != 0)
+          if (id(dial_fans_id).fan_count() > 0)
             items[n++] = 3;
-          items[n++] = 4;
+          if (strcmp("${climate_entity}", "climate.your_ac") != 0)
+            items[n++] = 4;
+          if (strcmp("${music_player_entity}", "media_player.your_player") != 0)
+            items[n++] = 5;
+          items[n++] = 6;
 
           int slot = -1;
           for (int s = 0; s < 5; s++) {
@@ -471,7 +557,7 @@ script:
           const int sel = id(menu_sel);
           const int idx = ((sel + slot_offset) % n + n) % n;
 
-          int best_slot_for_index[5];
+          int best_slot_for_index[7];
           for (int i = 0; i < n; i++)
             best_slot_for_index[i] = -1;
           for (int s = 0; s < 5; s++) {
@@ -500,17 +586,21 @@ script:
           static constexpr int SLOT_N = 5;
           static constexpr int OFFSETS[5] = {-2, -1, 0, 1, 2};
 
-          int items[5];
+          int items[7];
           int n = 0;
           if (strcmp("${timer_entity}", "timer.your_timer") != 0)
             items[n++] = 0;
           if (id(dial_lights_id).light_count() > 0)
             items[n++] = 1;
-          if (strcmp("${climate_entity}", "climate.your_ac") != 0)
+          if (id(dial_switches_id).switch_count() > 0)
             items[n++] = 2;
-          if (strcmp("${music_player_entity}", "media_player.your_player") != 0)
+          if (id(dial_fans_id).fan_count() > 0)
             items[n++] = 3;
-          items[n++] = 4;
+          if (strcmp("${climate_entity}", "climate.your_ac") != 0)
+            items[n++] = 4;
+          if (strcmp("${music_player_entity}", "media_player.your_player") != 0)
+            items[n++] = 5;
+          items[n++] = 6;
 
           lv_obj_t* icons[5] = {
             id(slot_far_up_img),  id(slot_near_up_img),
@@ -527,24 +617,30 @@ script:
             id(slot_near_dn), id(slot_far_dn)
           };
 
-          const char* TITLES[5] = {"Timer", "Lights", "AC", "Music", "Home"};
-          const lv_img_dsc_t* IMGS[5] = {
+          const char* TITLES[7] = {"Timer", "Lights", "Switches", "Fan", "AC", "Music", "Home"};
+          const lv_img_dsc_t* IMGS[7] = {
             id(menu_img_timer)->get_lv_image_dsc(),
             id(menu_img_light)->get_lv_image_dsc(),
+            id(menu_img_switch)->get_lv_image_dsc(),
+            id(menu_img_fan)->get_lv_image_dsc(),
             id(menu_img_ac)->get_lv_image_dsc(),
             id(menu_img_music)->get_lv_image_dsc(),
             id(menu_img_home)->get_lv_image_dsc()
           };
-          const uint32_t ACCENT_COLORS[5] = {
+          const uint32_t ACCENT_COLORS[7] = {
             0xFB923C,
             0xFDC003,
+            0x4ADE80,
+            0x5ABBFD,
             0x5ABBFD,
             0xA792E8,
             0x576BFE
           };
-          const uint32_t PILL_COLORS[5] = {
+          const uint32_t PILL_COLORS[7] = {
             0x2A1200,
             0x2A1E00,
+            0x0A2A17,
+            0x001A2A,
             0x001A2A,
             0x150A2A,
             0x0D1537
@@ -553,7 +649,7 @@ script:
           const int sel = id(menu_sel);
           id(menu_func) = items[sel];
 
-          int best_slot_for_index[5];
+          int best_slot_for_index[7];
           for (int i = 0; i < n; i++)
             best_slot_for_index[i] = -1;
           for (int s = 0; s < SLOT_N; s++) {
@@ -627,10 +723,11 @@ script:
             lv_obj_set_style_border_width(id(slot_center), 0, LV_PART_MAIN);
           }
 
-          lv_obj_t* sdots[5] = {
-            id(sdot_0), id(sdot_1), id(sdot_2), id(sdot_3), id(sdot_4)
+          static constexpr int MAX_DOTS = 7;
+          lv_obj_t* sdots[MAX_DOTS] = {
+            id(sdot_0), id(sdot_1), id(sdot_2), id(sdot_3), id(sdot_4), id(sdot_5), id(sdot_6)
           };
-          for (int d = 0; d < SLOT_N; d++) {
+          for (int d = 0; d < MAX_DOTS; d++) {
             if (d >= n) {
               lv_obj_add_flag(sdots[d], LV_OBJ_FLAG_HIDDEN);
               continue;
@@ -939,6 +1036,32 @@ lvgl:
                   align: RIGHT_MID
                   x: -10
                   y: 28
+                  width: 5
+                  height: 5
+                  radius: 3
+                  bg_color: col_menu_sdot_dim
+                  bg_opa: COVER
+                  border_width: 0
+                  clickable: false
+                  scrollbar_mode: "OFF"
+              - obj:
+                  id: sdot_5
+                  align: RIGHT_MID
+                  x: -10
+                  y: 42
+                  width: 5
+                  height: 5
+                  radius: 3
+                  bg_color: col_menu_sdot_dim
+                  bg_opa: COVER
+                  border_width: 0
+                  clickable: false
+                  scrollbar_mode: "OFF"
+              - obj:
+                  id: sdot_6
+                  align: RIGHT_MID
+                  x: -10
+                  y: 56
                   width: 5
                   height: 5
                   radius: 3
