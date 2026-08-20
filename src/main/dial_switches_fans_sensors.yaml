@@ -1,36 +1,32 @@
-# Example bindings for one switch and one MaxxFan-style fan+lid.
-# Copy/repeat this block per entity, same as dial_lights_sensors.yaml does for lights.
-# Update the entity_id values and dial.yaml's dial_switches:/dial_fans: lists to match.
-
 text_sensor:
   - platform: homeassistant
-    id: dial_switch_pump_state
+    id: dial_switch_dummy_switch_state
     entity_id: switch.dummy_switch
     internal: true
     on_value:
       - script.execute: menu_on_ha_update
 
   - platform: homeassistant
-    id: dial_fan_vent_state
+    id: dial_fan_dummy_fan_state
     entity_id: fan.dummy_fan
     internal: true
     on_value:
       - script.execute: menu_on_ha_update
 
   - platform: homeassistant
-    id: dial_fan_vent_direction
+    id: dial_fan_dummy_fan_direction
     entity_id: fan.dummy_fan
     attribute: direction
     internal: true
 
   - platform: homeassistant
-    id: dial_fan_lid_state
-    entity_id: cover.dummy_fan
+    id: dial_fan_dummy_fan_cover_state
+    entity_id: cover.dummy_fan_cover
     internal: true
 
 sensor:
   - platform: homeassistant
-    id: dial_fan_vent_percentage
+    id: dial_fan_dummy_fan_percentage
     entity_id: fan.dummy_fan
     attribute: percentage
     internal: true
@@ -38,10 +34,10 @@ sensor:
       - script.execute: menu_on_ha_update
 
   # Optional -- only include if your MaxxFan lid reports a numeric position (0-100).
-  # If it's open/closed only, delete this block and the lid_position_sensor line
-  # in dial.yaml's dial_fans: entry.
+  # If it's open/closed only, leave this commented out along with the
+  # lid_position_sensor line in dial.yaml's dial_fans: entry.
   #- platform: homeassistant
-  #  id: dial_fan_lid_position
-  #  entity_id: cover.maxxair_lid
+  #  id: dial_fan_dummy_fan_cover_position
+  #  entity_id: cover.dummy_fan_cover
   #  attribute: current_position
   #  internal: true
