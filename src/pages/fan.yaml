@@ -1,26 +1,28 @@
+substitutions:
+  # MDI glyph codepoints, read directly from the bundled
+  # materialdesignicons-webfont.ttf's cmap (not guessed).
+  icon_fan_power: "\U000F0425"    # mdi-power
+  icon_fan_lid: "\U000F111C"      # mdi-window-shutter
+
 image:
+  # fan_img_direction stays a placeholder PNG for now -- the direction
+  # button is getting replaced with plain IN/OUT text next (roadmap item 2),
+  # so converting this icon now would be thrown away immediately after.
   - file: src/assets/images/ac.png   # placeholder -- swap for real fan/direction/lid icons in src/assets/images/
     id: fan_img_direction
     type: RGB565
     transparency: alpha_channel
     resize: 22x22
-  - file: src/assets/images/ac.png
-    id: fan_img_power
-    type: RGB565
-    transparency: alpha_channel
-    resize: 20x20
-  - file: src/assets/images/ac.png
-    id: fan_img_power_big
-    type: RGB565
-    transparency: alpha_channel
-    resize: 36x36
-  - file: src/assets/images/ac.png
-    id: fan_img_lid
-    type: RGB565
-    transparency: alpha_channel
-    resize: 18x18
 
 font:
+  - file: src/assets/fonts/materialdesignicons-webfont.ttf
+    id: font_mdi_fan
+    size: 20
+    bpp: 4
+    glyphs:
+      - ${icon_fan_power}
+      - ${icon_fan_lid}
+
   - file:
       family: DM+Sans
       weight: 900
@@ -470,8 +472,10 @@ lvgl:
                   on_click:
                     - script.execute: toggle_fan_onoff
                   widgets:
-                    - image:
-                        src: fan_img_power
+                    - label:
+                        text: ${icon_fan_power}
+                        text_font: font_mdi_fan
+                        text_color: 0xFFFFFF
                         align: CENTER
                         clickable: false
 
@@ -492,8 +496,10 @@ lvgl:
                   on_click:
                     - script.execute: open_fan_lid
                   widgets:
-                    - image:
-                        src: fan_img_lid
+                    - label:
+                        text: ${icon_fan_lid}
+                        text_font: font_mdi_fan
+                        text_color: 0xFFFFFF
                         align: CENTER
                         clickable: false
 
@@ -556,8 +562,10 @@ lvgl:
                   on_click:
                     - script.execute: toggle_fan_lid
                   widgets:
-                    - image:
-                        src: fan_img_lid
+                    - label:
+                        text: ${icon_fan_lid}
+                        text_font: font_mdi_fan
+                        text_color: 0xFFFFFF
                         align: CENTER
                         y: -14
                         clickable: false
