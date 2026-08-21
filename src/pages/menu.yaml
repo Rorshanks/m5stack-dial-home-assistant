@@ -704,6 +704,11 @@ script:
             }
             lv_obj_set_style_opa(title_lbls[slot], slot == 2 ? 255 : layout.opa_text, LV_PART_MAIN);
             lv_label_set_text(icons[slot], GLYPHS[func]);
+            if (slot == 2) {
+              lv_obj_set_style_text_color(icons[slot], lv_color_hex(ACCENT_COLORS[func]), LV_PART_MAIN);
+            } else {
+              lv_obj_set_style_text_color(icons[slot], lv_color_hex(0x232A38), LV_PART_MAIN);
+            }
             lv_obj_set_style_opa(icons[slot], slot == 2 ? 255 : layout.opa_icon, LV_PART_MAIN);
           }
 
