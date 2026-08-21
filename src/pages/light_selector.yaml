@@ -168,8 +168,10 @@ script:
             const CardColors cc = colors_for_snapshot(snap);
             const bool inactive = !snap.state_valid || !snap.is_on;
 
-            lv_obj_set_style_img_recolor(img, lv_color_hex(cc.accent), LV_PART_MAIN);
-            lv_obj_set_style_img_recolor_opa(img, inactive ? 160 : 255, LV_PART_MAIN);
+            // img is now an MDI-glyph label, not an image widget -- recolor
+            // via text_color/text_opa instead of img_recolor/img_recolor_opa.
+            lv_obj_set_style_text_color(img, lv_color_hex(cc.accent), LV_PART_MAIN);
+            lv_obj_set_style_text_opa(img, inactive ? 160 : 255, LV_PART_MAIN);
 
             int icon_opa = layout.opa_icon;
             if (is_center) {
@@ -242,7 +244,7 @@ script:
                                            const esphome::dial_carousel::CarouselSlotLayout &layout) {
             lv_label_set_text(lbl, "");
             lv_obj_set_style_opa(img, 0, LV_PART_MAIN);
-            lv_obj_set_style_img_recolor_opa(img, 0, LV_PART_MAIN);
+            lv_obj_set_style_text_opa(img, 0, LV_PART_MAIN);
             lv_obj_set_style_bg_color(slot, lv_color_hex(0x0D1537), LV_PART_MAIN);
             lv_obj_set_style_bg_opa(slot, layout.opa_bg, LV_PART_MAIN);
             lv_obj_set_style_border_width(slot, 0, LV_PART_MAIN);
@@ -318,7 +320,7 @@ script:
               id(selector_carousel).apply_title_layout(slot, layout);
               lv_label_set_text(title_lbls[slot], "");
               lv_obj_set_style_opa(icons[slot], 0, LV_PART_MAIN);
-              lv_obj_set_style_img_recolor_opa(icons[slot], 0, LV_PART_MAIN);
+              lv_obj_set_style_text_opa(icons[slot], 0, LV_PART_MAIN);
               lv_obj_set_style_bg_opa(slots[slot], LV_OPA_TRANSP, LV_PART_MAIN);
             }
             lv_label_set_text(id(ls_slot_center_sub), "");
@@ -555,11 +557,14 @@ lvgl:
                         pad_all: 0
                         clickable: false
                         widgets:
-                          - image:
+                          - label:
                               id: ls_slot_far_up_img
                               align: LEFT_MID
                               x: 2
-                              src: menu_img_light
+                              text: ${icon_menu_light}
+                              text_font: font_mdi_menu
+                              text_color: 0xFFFFFF
+                              clickable: false
                     - obj:
                         id: ls_slot_near_up
                         align: TOP_MID
@@ -572,11 +577,14 @@ lvgl:
                         pad_all: 0
                         clickable: false
                         widgets:
-                          - image:
+                          - label:
                               id: ls_slot_near_up_img
                               align: LEFT_MID
                               x: 2
-                              src: menu_img_light
+                              text: ${icon_menu_light}
+                              text_font: font_mdi_menu
+                              text_color: 0xFFFFFF
+                              clickable: false
                     - obj:
                         id: ls_slot_center_bar
                         align: TOP_MID
@@ -605,11 +613,14 @@ lvgl:
                         pad_all: 0
                         clickable: false
                         widgets:
-                          - image:
+                          - label:
                               id: ls_slot_center_img
                               align: LEFT_MID
                               x: 14
-                              src: menu_img_light
+                              text: ${icon_menu_light}
+                              text_font: font_mdi_menu
+                              text_color: 0xFFFFFF
+                              clickable: false
                           - label:
                               id: ls_slot_center_lbl
                               x: 54
@@ -640,11 +651,14 @@ lvgl:
                         pad_all: 0
                         clickable: false
                         widgets:
-                          - image:
+                          - label:
                               id: ls_slot_near_dn_img
                               align: LEFT_MID
                               x: 2
-                              src: menu_img_light
+                              text: ${icon_menu_light}
+                              text_font: font_mdi_menu
+                              text_color: 0xFFFFFF
+                              clickable: false
                     - obj:
                         id: ls_slot_far_dn
                         align: TOP_MID
@@ -657,11 +671,14 @@ lvgl:
                         pad_all: 0
                         clickable: false
                         widgets:
-                          - image:
+                          - label:
                               id: ls_slot_far_dn_img
                               align: LEFT_MID
                               x: 2
-                              src: menu_img_light
+                              text: ${icon_menu_light}
+                              text_font: font_mdi_menu
+                              text_color: 0xFFFFFF
+                              clickable: false
               - label:
                   id: ls_overlay_far_up_lbl
                   align: TOP_LEFT

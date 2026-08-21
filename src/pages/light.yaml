@@ -1,23 +1,25 @@
-image:
-  - file: "src/assets/images/palette.png"
-    id: light_img_palette
-    type: RGB565
-    transparency: alpha_channel
-    resize: 22x22
-
-  - file: src/assets/images/light.png
-    id: light_img_dengguang
-    type: RGB565
-    transparency: alpha_channel
-    resize: 20x20
-
-  - file: src/assets/images/light.png
-    id: light_img_dengguang_onoff
-    type: RGB565
-    transparency: alpha_channel
-    resize: 36x36
+substitutions:
+  # MDI glyph codepoints, read directly from the bundled
+  # materialdesignicons-webfont.ttf's cmap (not guessed).
+  icon_light_palette: "\U000F03D8"   # mdi-palette
+  icon_light_bulb: "\U000F0335"      # mdi-lightbulb
 
 font:
+  - file: src/assets/fonts/materialdesignicons-webfont.ttf
+    id: font_mdi_light_small
+    size: 20
+    bpp: 4
+    glyphs:
+      - ${icon_light_palette}
+      - ${icon_light_bulb}
+
+  - file: src/assets/fonts/materialdesignicons-webfont.ttf
+    id: font_mdi_light_big
+    size: 36
+    bpp: 4
+    glyphs:
+      - ${icon_light_bulb}
+
   - file:
       family: DM+Sans
       weight: 900
@@ -1020,8 +1022,10 @@ lvgl:
                         then:
                           - script.execute: open_colorpicker
                   widgets:
-                    - image:
-                        src: light_img_palette
+                    - label:
+                        text: ${icon_light_palette}
+                        text_font: font_mdi_light_small
+                        text_color: 0xFFFFFF
                         align: CENTER
                         clickable: false
 
@@ -1047,8 +1051,10 @@ lvgl:
                   on_click:
                     - script.execute: toggle_light_onoff
                   widgets:
-                    - image:
-                        src: light_img_dengguang
+                    - label:
+                        text: ${icon_light_bulb}
+                        text_font: font_mdi_light_small
+                        text_color: 0xFFFFFF
                         align: CENTER
                         clickable: false
 
@@ -1076,9 +1082,11 @@ lvgl:
                   on_click:
                     - script.execute: toggle_light_onoff
                   widgets:
-                    - image:
+                    - label:
                         id: img_onoff_bulb
-                        src: light_img_dengguang_onoff
+                        text: ${icon_light_bulb}
+                        text_font: font_mdi_light_big
+                        text_color: 0xFFFFFF
                         align: CENTER
                         y: -12
                         clickable: false

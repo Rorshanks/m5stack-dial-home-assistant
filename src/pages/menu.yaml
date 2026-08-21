@@ -1,4 +1,29 @@
+substitutions:
+  # MDI glyph codepoints, read directly from the bundled
+  # materialdesignicons-webfont.ttf's cmap (not guessed). Shared with
+  # light_selector.yaml, which reuses icon_menu_light + font_mdi_menu.
+  icon_menu_timer: "\U000F13AB"    # mdi-timer
+  icon_menu_light: "\U000F0335"    # mdi-lightbulb
+  icon_menu_switch: "\U000F0521"   # mdi-toggle-switch
+  icon_menu_fan: "\U000F0210"      # mdi-fan
+  icon_menu_ac: "\U000F001B"       # mdi-air-conditioner
+  icon_menu_music: "\U000F0388"    # mdi-music-note
+  icon_menu_home: "\U000F02DC"     # mdi-home
+
 font:
+  - file: src/assets/fonts/materialdesignicons-webfont.ttf
+    id: font_mdi_menu
+    size: 32
+    bpp: 4
+    glyphs:
+      - ${icon_menu_timer}
+      - ${icon_menu_light}
+      - ${icon_menu_switch}
+      - ${icon_menu_fan}
+      - ${icon_menu_ac}
+      - ${icon_menu_music}
+      - ${icon_menu_home}
+
   - file: "gfonts://DM+Sans"
     id: font_menu_item
     size: 20
@@ -37,42 +62,6 @@ color:
   - id: col_menu_sdot_dim
     hex: "2A3348"
 
-image:
-  - file: src/assets/images/bulb.png
-    id: menu_img_light
-    type: RGB565
-    transparency: alpha_channel
-    resize: 34x34
-  - file: src/assets/images/ac_logo.png
-    id: menu_img_ac
-    type: RGB565
-    transparency: alpha_channel
-    resize: 32x32
-  - file: src/assets/images/music.png
-    id: menu_img_music
-    type: RGB565
-    transparency: alpha_channel
-    resize: 34x34
-  - file: src/assets/images/light.png   # placeholder -- swap for a dedicated switch icon
-    id: menu_img_switch
-    type: RGB565
-    transparency: alpha_channel
-    resize: 34x34
-  - file: src/assets/images/ac.png      # placeholder -- swap for a dedicated fan icon
-    id: menu_img_fan
-    type: RGB565
-    transparency: alpha_channel
-    resize: 32x32
-  - file: src/assets/images/timer.png
-    id: menu_img_timer
-    type: RGB565
-    transparency: alpha_channel
-    resize: 32x32
-  - file: src/assets/images/home.png
-    id: menu_img_home
-    type: RGB565
-    transparency: alpha_channel
-    resize: 34x34
 globals:
   - id: menu_sel
     type: int
@@ -621,14 +610,14 @@ script:
           };
 
           const char* TITLES[7] = {"Timer", "Lights", "Switches", "Fan", "AC", "Music", "Home"};
-          const lv_img_dsc_t* IMGS[7] = {
-            id(menu_img_timer)->get_lv_image_dsc(),
-            id(menu_img_light)->get_lv_image_dsc(),
-            id(menu_img_switch)->get_lv_image_dsc(),
-            id(menu_img_fan)->get_lv_image_dsc(),
-            id(menu_img_ac)->get_lv_image_dsc(),
-            id(menu_img_music)->get_lv_image_dsc(),
-            id(menu_img_home)->get_lv_image_dsc()
+          const char* GLYPHS[7] = {
+            "${icon_menu_timer}",
+            "${icon_menu_light}",
+            "${icon_menu_switch}",
+            "${icon_menu_fan}",
+            "${icon_menu_ac}",
+            "${icon_menu_music}",
+            "${icon_menu_home}"
           };
           const uint32_t ACCENT_COLORS[7] = {
             0xFB923C,
@@ -714,7 +703,7 @@ script:
               lv_obj_set_style_text_color(title_lbls[slot], lv_color_hex(0x232A38), LV_PART_MAIN);
             }
             lv_obj_set_style_opa(title_lbls[slot], slot == 2 ? 255 : layout.opa_text, LV_PART_MAIN);
-            lv_img_set_src(icons[slot], IMGS[func]);
+            lv_label_set_text(icons[slot], GLYPHS[func]);
             lv_obj_set_style_opa(icons[slot], slot == 2 ? 255 : layout.opa_icon, LV_PART_MAIN);
           }
 
@@ -811,11 +800,14 @@ lvgl:
                         on_click:
                           - lambda: 'id(menu_touch_slot).execute(-2);'
                         widgets:
-                          - image:
+                          - label:
                               id: slot_far_up_img
                               align: LEFT_MID
                               x: 2
-                              src: menu_img_timer
+                              text: ${icon_menu_timer}
+                              text_font: font_mdi_menu
+                              text_color: 0xFFFFFF
+                              clickable: false
                           - label:
                               id: slot_far_up_lbl
                               align: LEFT_MID
@@ -839,11 +831,14 @@ lvgl:
                         on_click:
                           - lambda: 'id(menu_touch_slot).execute(-1);'
                         widgets:
-                          - image:
+                          - label:
                               id: slot_near_up_img
                               align: LEFT_MID
                               x: 2
-                              src: menu_img_light
+                              text: ${icon_menu_light}
+                              text_font: font_mdi_menu
+                              text_color: 0xFFFFFF
+                              clickable: false
                           - label:
                               id: slot_near_up_lbl
                               align: LEFT_MID
@@ -883,11 +878,14 @@ lvgl:
                         on_click:
                           - lambda: 'id(menu_touch_slot).execute(0);'
                         widgets:
-                          - image:
+                          - label:
                               id: slot_center_img
                               align: LEFT_MID
                               x: 14
-                              src: menu_img_light
+                              text: ${icon_menu_light}
+                              text_font: font_mdi_menu
+                              text_color: 0xFFFFFF
+                              clickable: false
                           - label:
                               id: slot_center_lbl
                               x: 54
@@ -921,11 +919,14 @@ lvgl:
                         on_click:
                           - lambda: 'id(menu_touch_slot).execute(1);'
                         widgets:
-                          - image:
+                          - label:
                               id: slot_near_dn_img
                               align: LEFT_MID
                               x: 2
-                              src: menu_img_ac
+                              text: ${icon_menu_ac}
+                              text_font: font_mdi_menu
+                              text_color: 0xFFFFFF
+                              clickable: false
                           - label:
                               id: slot_near_dn_lbl
                               align: LEFT_MID
@@ -949,11 +950,14 @@ lvgl:
                         on_click:
                           - lambda: 'id(menu_touch_slot).execute(2);'
                         widgets:
-                          - image:
+                          - label:
                               id: slot_far_dn_img
                               align: LEFT_MID
                               x: 2
-                              src: menu_img_music
+                              text: ${icon_menu_music}
+                              text_font: font_mdi_menu
+                              text_color: 0xFFFFFF
+                              clickable: false
                           - label:
                               id: slot_far_dn_lbl
                               align: LEFT_MID
@@ -977,10 +981,13 @@ lvgl:
                   clickable: false
                   scrollbar_mode: "OFF"
                   widgets:
-                    - image:
-                        src: menu_img_home
+                    - label:
+                        text: ${icon_menu_home}
+                        text_font: font_mdi_menu
+                        text_color: 0xFFFFFF
                         align: CENTER
                         opa: TRANSP
+                        clickable: false
 
               - obj:
                   id: sdot_0

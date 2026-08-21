@@ -1,4 +1,26 @@
+substitutions:
+  # MDI glyph codepoints, read directly from the bundled
+  # materialdesignicons-webfont.ttf's cmap (not guessed).
+  icon_air_fan_off: "\U000F081D"       # mdi-fan-off
+  icon_air_fan_on: "\U000F0210"        # mdi-fan
+  icon_air_power_off: "\U000F0902"     # mdi-power-off
+  icon_air_power_on: "\U000F0903"      # mdi-power-on
+  icon_air_swing_off: "\U000F1C92"     # mdi-arrow-oscillating-off
+  icon_air_swing_on: "\U000F1C91"      # mdi-arrow-oscillating
+
 font:
+  - file: src/assets/fonts/materialdesignicons-webfont.ttf
+    id: font_mdi_air
+    size: 25
+    bpp: 4
+    glyphs:
+      - ${icon_air_fan_off}
+      - ${icon_air_fan_on}
+      - ${icon_air_power_off}
+      - ${icon_air_power_on}
+      - ${icon_air_swing_off}
+      - ${icon_air_swing_on}
+
   - file:
       family: DM+Sans
       weight: 500
@@ -49,43 +71,6 @@ font:
     size: 40
     bpp: 4
     glyphs: "\xc2\xb0"
-
-image:
-  - file: src/assets/images/air_page/fan_off.png
-    id: img_air_fan_off
-    type: RGB565
-    transparency: alpha_channel
-    resize: 25x25
-
-  - file: src/assets/images/air_page/fan_on.png
-    id: img_air_fan_on
-    type: RGB565
-    transparency: alpha_channel
-    resize: 25x25
-
-  - file: src/assets/images/air_page/power_off.png
-    id: img_air_power_off
-    type: RGB565
-    transparency: alpha_channel
-    resize: 25x25
-
-  - file: src/assets/images/air_page/power_on.png
-    id: img_air_power_on
-    type: RGB565
-    transparency: alpha_channel
-    resize: 25x25
-
-  - file: src/assets/images/air_page/swing_off.png
-    id: img_air_swing_off
-    type: RGB565
-    transparency: alpha_channel
-    resize: 25x25
-
-  - file: src/assets/images/air_page/swing_on.png
-    id: img_air_swing_on
-    type: RGB565
-    transparency: alpha_channel
-    resize: 25x25
 
 color:
   - id: col_air_bg
@@ -766,9 +751,9 @@ script:
           lv_obj_set_style_arc_opa(id(air_set_arc), arc_opa, LV_PART_INDICATOR);
           lv_obj_set_style_bg_opa(id(air_set_arc), arc_opa, LV_PART_KNOB);
 
-          lv_img_set_src(id(img_air_fan_btn), cm == 1 ? id(img_air_fan_on) : id(img_air_fan_off));
-          lv_img_set_src(id(img_air_power_btn), id(air_btn_power_active) ? id(img_air_power_on) : id(img_air_power_off));
-          lv_img_set_src(id(img_air_swing_btn), cm == 2 ? id(img_air_swing_on) : id(img_air_swing_off));
+          lv_label_set_text(id(img_air_fan_btn), cm == 1 ? "${icon_air_fan_on}" : "${icon_air_fan_off}");
+          lv_label_set_text(id(img_air_power_btn), id(air_btn_power_active) ? "${icon_air_power_on}" : "${icon_air_power_off}");
+          lv_label_set_text(id(img_air_swing_btn), cm == 2 ? "${icon_air_swing_on}" : "${icon_air_swing_off}");
 
           const lv_opa_t fan_btn_opa = fan_supported ? LV_OPA_COVER : LV_OPA_40;
           lv_obj_set_style_opa(id(btn_air_fan), fan_btn_opa, LV_PART_MAIN);
@@ -1116,10 +1101,13 @@ lvgl:
                   on_click:
                     - script.execute: air_toggle_fan_mode
                   widgets:
-                    - image:
+                    - label:
                         id: img_air_fan_btn
                         align: CENTER
-                        src: img_air_fan_off
+                        text: ${icon_air_fan_off}
+                        text_font: font_mdi_air
+                        text_color: 0xFFFFFF
+                        clickable: false
 
               - obj:
                   id: btn_air_power
@@ -1138,10 +1126,13 @@ lvgl:
                   on_click:
                     - script.execute: air_power_toggle
                   widgets:
-                    - image:
+                    - label:
                         id: img_air_power_btn
                         align: CENTER
-                        src: img_air_power_off
+                        text: ${icon_air_power_off}
+                        text_font: font_mdi_air
+                        text_color: 0xFFFFFF
+                        clickable: false
 
               - obj:
                   id: btn_air_swing
@@ -1159,7 +1150,10 @@ lvgl:
                   on_click:
                     - script.execute: air_toggle_hvac_mode
                   widgets:
-                    - image:
+                    - label:
                         id: img_air_swing_btn
                         align: CENTER
-                        src: img_air_swing_off
+                        text: ${icon_air_swing_off}
+                        text_font: font_mdi_air
+                        text_color: 0xFFFFFF
+                        clickable: false
