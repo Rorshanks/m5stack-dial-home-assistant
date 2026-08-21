@@ -234,6 +234,24 @@ script:
                 variables:
                   target_entity: !lambda 'return id(dial_fans_id).active_entity_id();'
                   reverse: !lambda 'return id(fan_direction_reverse);'
+            # This specific fan (custom IR-blaster device) only transmits a
+            # physical command from its speed/percentage output -- changing
+            # direction alone updates the HA-visible attribute but sends no
+            # IR code. Re-send the current speed right after so the fan
+            # actually responds, but only while it's already running (doing
+            # this while off would turn it on as a side effect).
+            - if:
+                condition:
+                  lambda: 'return id(fan_on);'
+                then:
+                  - homeassistant.action:
+                      action: fan.set_percentage
+                      data_template:
+                        entity_id: "{{ target_entity }}"
+                        percentage: "{{ pct | int }}"
+                      variables:
+                        target_entity: !lambda 'return id(dial_fans_id).active_entity_id();'
+                        pct: !lambda 'return id(fan_percent);'
             - script.execute: refresh_fan_page
 
   # ---- lid sub-page ----
