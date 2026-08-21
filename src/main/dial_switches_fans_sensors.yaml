@@ -1,7 +1,14 @@
 text_sensor:
   - platform: homeassistant
-    id: dial_switch_dummy_switch_state
-    entity_id: switch.dummy_switch
+    id: dial_switch_relay1_state
+    entity_id: switch.waveshare_relay_1
+    internal: true
+    on_value:
+      - script.execute: menu_on_ha_update
+
+  - platform: homeassistant
+    id: dial_switch_relay2_state
+    entity_id: switch.waveshare_relay_2
     internal: true
     on_value:
       - script.execute: menu_on_ha_update

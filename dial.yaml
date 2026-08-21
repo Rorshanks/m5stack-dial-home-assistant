@@ -50,9 +50,12 @@ dial_lights:
 
 
 dial_switches:
-      - entity_id: switch.dummy_switch
-        name: Dummy Switch
-        state_sensor: dial_switch_dummy_switch_state
+      - entity_id: switch.waveshare_relay_1
+        name: Relay 1
+        state_sensor: dial_switch_relay1_state
+      - entity_id: switch.waveshare_relay_2
+        name: Relay 2
+        state_sensor: dial_switch_relay2_state
 
 dial_fans:
       # No direction_sensor/lid_entity_id -- this fan doesn't support reverse
