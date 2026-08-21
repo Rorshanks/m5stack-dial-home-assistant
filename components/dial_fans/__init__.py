@@ -49,12 +49,14 @@ async def to_code(config):
     for fan in config["fans"]:
         entity = fan[CONF_ENTITY_ID]
         name = fan[CONF_NAME]
-        state = None
-        percentage = None
-        direction = None
+        # A bare Python None isn't a valid C++ codegen expression -- an
+        # omitted optional sensor needs to render as an actual `nullptr`.
+        state = cg.RawExpression("nullptr")
+        percentage = cg.RawExpression("nullptr")
+        direction = cg.RawExpression("nullptr")
         lid_entity_id = fan.get(CONF_LID_ENTITY_ID, "")
-        lid_state = None
-        lid_position = None
+        lid_state = cg.RawExpression("nullptr")
+        lid_position = cg.RawExpression("nullptr")
         if CONF_STATE_SENSOR in fan:
             state = await cg.get_variable(fan[CONF_STATE_SENSOR])
         if CONF_PERCENTAGE_SENSOR in fan:

@@ -1,33 +1,62 @@
 text_sensor:
   - platform: homeassistant
-    id: dial_switch_dummy_switch_state
-    entity_id: switch.dummy_switch
+    id: dial_switch_relay1_state
+    entity_id: switch.waveshare_relay_1
     internal: true
     on_value:
       - script.execute: menu_on_ha_update
 
   - platform: homeassistant
-    id: dial_fan_dummy_fan_state
-    entity_id: fan.dummy_fan
+    id: dial_switch_relay2_state
+    entity_id: switch.waveshare_relay_2
     internal: true
     on_value:
       - script.execute: menu_on_ha_update
 
   - platform: homeassistant
-    id: dial_fan_dummy_fan_direction
-    entity_id: fan.dummy_fan
+    id: dial_switch_pump_state
+    entity_id: switch.water_pump
+    internal: true
+    on_value:
+      - script.execute: menu_on_ha_update
+
+  - platform: homeassistant
+    id: dial_fan_ceiling_state
+    entity_id: fan.living_room_ceiling_fan
+    internal: true
+    on_value:
+      - script.execute: menu_on_ha_update
+
+  - platform: homeassistant
+    id: dial_fan_vent_state
+    entity_id: fan.maxxair_vent
+    internal: true
+    on_value:
+      - script.execute: menu_on_ha_update
+
+  - platform: homeassistant
+    id: dial_fan_vent_direction
+    entity_id: fan.maxxair_vent
     attribute: direction
     internal: true
 
   - platform: homeassistant
-    id: dial_fan_dummy_fan_cover_state
-    entity_id: cover.dummy_fan_cover
+    id: dial_fan_lid_state
+    entity_id: cover.maxxair_lid
     internal: true
 
 sensor:
   - platform: homeassistant
-    id: dial_fan_dummy_fan_percentage
-    entity_id: fan.dummy_fan
+    id: dial_fan_ceiling_percentage
+    entity_id: fan.living_room_ceiling_fan
+    attribute: percentage
+    internal: true
+    on_value:
+      - script.execute: menu_on_ha_update
+
+  - platform: homeassistant
+    id: dial_fan_vent_percentage
+    entity_id: fan.maxxair_vent
     attribute: percentage
     internal: true
     on_value:
@@ -37,7 +66,7 @@ sensor:
   # If it's open/closed only, leave this commented out along with the
   # lid_position_sensor line in dial.yaml's dial_fans: entry.
   #- platform: homeassistant
-  #  id: dial_fan_dummy_fan_cover_position
-  #  entity_id: cover.dummy_fan_cover
+  #  id: dial_fan_vent_lid_position
+  #  entity_id: cover.maxxair_lid
   #  attribute: current_position
   #  internal: true

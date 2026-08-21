@@ -1,26 +1,28 @@
+substitutions:
+  # MDI glyph codepoints, read directly from the bundled
+  # materialdesignicons-webfont.ttf's cmap (not guessed).
+  icon_fan_power: "\U000F0425"    # mdi-power
+  icon_fan_lid: "\U000F111C"      # mdi-window-shutter
+
 image:
+  # fan_img_direction stays a placeholder PNG for now -- the direction
+  # button is getting replaced with plain IN/OUT text next (roadmap item 2),
+  # so converting this icon now would be thrown away immediately after.
   - file: src/assets/images/ac.png   # placeholder -- swap for real fan/direction/lid icons in src/assets/images/
     id: fan_img_direction
     type: RGB565
     transparency: alpha_channel
     resize: 22x22
-  - file: src/assets/images/ac.png
-    id: fan_img_power
-    type: RGB565
-    transparency: alpha_channel
-    resize: 20x20
-  - file: src/assets/images/ac.png
-    id: fan_img_power_big
-    type: RGB565
-    transparency: alpha_channel
-    resize: 36x36
-  - file: src/assets/images/ac.png
-    id: fan_img_lid
-    type: RGB565
-    transparency: alpha_channel
-    resize: 18x18
 
 font:
+  - file: src/assets/fonts/materialdesignicons-webfont.ttf
+    id: font_mdi_fan
+    size: 20
+    bpp: 4
+    glyphs:
+      - ${icon_fan_power}
+      - ${icon_fan_lid}
+
   - file:
       family: DM+Sans
       weight: 900
@@ -79,6 +81,9 @@ globals:
   - id: fan_direction_reverse
     type: bool
     initial_value: 'false'
+  - id: fan_direction_supported
+    type: bool
+    initial_value: 'false'
   - id: fan_has_lid
     type: bool
     initial_value: 'false'
@@ -99,10 +104,18 @@ script:
             - lambda: |-
                 id(fan_on) = id(dial_fans_id).active_has_valid_state() && id(dial_fans_id).active_is_on();
                 if (id(dial_fans_id).active_percent_valid()) {
-                  id(fan_percent) = id(dial_fans_id).active_percent();
-                  id(fan_requested_percent) = id(fan_percent);
+                  // Speed is only ever set in 10% steps from this page -- snap
+                  // whatever HA reports (which may not be a multiple of 10, e.g.
+                  // before this fan was ever driven from the Dial) to match.
+                  int raw = id(dial_fans_id).active_percent();
+                  int snapped = ((raw + 5) / 10) * 10;
+                  if (snapped > 100) snapped = 100;
+                  if (snapped < 0) snapped = 0;
+                  id(fan_percent) = snapped;
+                  id(fan_requested_percent) = snapped;
                 }
-                id(fan_direction_reverse) = id(dial_fans_id).active_direction_valid() &&
+                id(fan_direction_supported) = id(dial_fans_id).active_direction_valid();
+                id(fan_direction_reverse) = id(fan_direction_supported) &&
                                              id(dial_fans_id).active_direction_reverse();
                 id(fan_has_lid) = id(dial_fans_id).active_has_lid();
                 id(fan_lid_is_open) = id(dial_fans_id).active_lid_state() == esphome::dial_fans::LidState::OPEN;
@@ -121,7 +134,10 @@ script:
   - id: fan_speed_up
     then:
       - lambda: |-
-          int v = id(fan_percent) + 5;
+          // Snap to the nearest 10 first so this always lands on a clean
+          // step (0, 10, 20, ...) even if fan_percent started off-grid.
+          int snapped = ((id(fan_percent) + 5) / 10) * 10;
+          int v = snapped + 10;
           if (v > 100) v = 100;
           id(fan_percent) = v;
           id(fan_requested_percent) = v;
@@ -132,7 +148,8 @@ script:
   - id: fan_speed_down
     then:
       - lambda: |-
-          int v = id(fan_percent) - 5;
+          int snapped = ((id(fan_percent) + 5) / 10) * 10;
+          int v = snapped - 10;
           if (v < 0) v = 0;
           id(fan_percent) = v;
           id(fan_requested_percent) = v;
@@ -144,42 +161,90 @@ script:
     mode: restart
     then:
       - delay: 250ms
-      - homeassistant.action:
-          action: fan.set_percentage
-          data_template:
-            entity_id: "{{ target_entity }}"
-            percentage: "{{ pct | int }}"
-          variables:
-            target_entity: !lambda 'return id(dial_fans_id).active_entity_id();'
-            pct: !lambda 'return id(fan_requested_percent);'
+      - if:
+          # fan.set_percentage 0 reads as "turn off" on most HA fan
+          # integrations, but doesn't update our local fan_on flag -- send an
+          # explicit turn_off and sync fan_on so the next power-button tap
+          # doesn't act on stale state (see toggle_fan_onoff below).
+          condition:
+            lambda: 'return id(fan_requested_percent) <= 0;'
+          then:
+            - lambda: 'id(fan_on) = false;'
+            - homeassistant.action:
+                action: fan.turn_off
+                data_template:
+                  entity_id: "{{ target_entity }}"
+                variables:
+                  target_entity: !lambda 'return id(dial_fans_id).active_entity_id();'
+          else:
+            - if:
+                condition:
+                  lambda: 'return id(fan_on);'
+                then:
+                  - homeassistant.action:
+                      action: fan.set_percentage
+                      data_template:
+                        entity_id: "{{ target_entity }}"
+                        percentage: "{{ pct | int }}"
+                      variables:
+                        target_entity: !lambda 'return id(dial_fans_id).active_entity_id();'
+                        pct: !lambda 'return id(fan_requested_percent);'
       - lambda: 'id(fan_user_adjusting) = false;'
+      - script.execute: refresh_fan_page
 
   # ---- on/off ----
   - id: toggle_fan_onoff
     then:
-      - lambda: 'id(fan_on) = !id(fan_on);'
-      - homeassistant.action:
-          action: "{{ 'fan.turn_on' if is_on else 'fan.turn_off' }}"
-          data_template:
-            entity_id: "{{ target_entity }}"
-          variables:
-            target_entity: !lambda 'return id(dial_fans_id).active_entity_id();'
-            is_on: !lambda 'return id(fan_on);'
+      - lambda: |-
+          id(fan_on) = !id(fan_on);
+          // If speed was dragged to 0 before the fan went off, restore a
+          // real speed here -- otherwise turning back on leaves the fan
+          // "on" at 0%/undefined, which looks identical to still being off.
+          // active_percent() is the component's live-tracked HA value, kept
+          // current independent of what page is open.
+          if (id(fan_on) && id(fan_percent) <= 0) {
+            int restored = id(dial_fans_id).active_percent_valid() ? id(dial_fans_id).active_percent() : 0;
+            id(fan_percent) = (restored > 0) ? restored : 50;
+            id(fan_requested_percent) = id(fan_percent);
+          }
+      - if:
+          condition:
+            lambda: 'return id(fan_on);'
+          then:
+            - homeassistant.action:
+                action: fan.turn_on
+                data_template:
+                  entity_id: "{{ target_entity }}"
+                  percentage: "{{ pct | int }}"
+                variables:
+                  target_entity: !lambda 'return id(dial_fans_id).active_entity_id();'
+                  pct: !lambda 'return id(fan_percent);'
+          else:
+            - homeassistant.action:
+                action: fan.turn_off
+                data_template:
+                  entity_id: "{{ target_entity }}"
+                variables:
+                  target_entity: !lambda 'return id(dial_fans_id).active_entity_id();'
       - script.execute: refresh_fan_page
 
   # ---- direction ----
   - id: toggle_fan_direction
     then:
-      - lambda: 'id(fan_direction_reverse) = !id(fan_direction_reverse);'
-      - homeassistant.action:
-          action: fan.set_direction
-          data_template:
-            entity_id: "{{ target_entity }}"
-            direction: "{{ 'reverse' if reverse else 'forward' }}"
-          variables:
-            target_entity: !lambda 'return id(dial_fans_id).active_entity_id();'
-            reverse: !lambda 'return id(fan_direction_reverse);'
-      - script.execute: refresh_fan_page
+      - if:
+          condition:
+            lambda: 'return id(fan_direction_supported);'
+          then:
+            - lambda: 'id(fan_direction_reverse) = !id(fan_direction_reverse);'
+            - homeassistant.action:
+                action: fan.set_direction
+                data_template:
+                  entity_id: "{{ target_entity }}"
+                  direction: "{{ 'reverse' if reverse else 'forward' }}"
+                variables:
+                  target_entity: !lambda 'return id(dial_fans_id).active_entity_id();'
+                  reverse: !lambda 'return id(fan_direction_reverse);'
+            - script.execute: refresh_fan_page
 
   # ---- lid sub-page ----
   - id: open_fan_lid
@@ -255,6 +320,12 @@ script:
 
           lv_obj_set_style_img_recolor(id(fan_img_direction_obj),
               id(fan_direction_reverse) ? lv_color_hex(0x5ABBFD) : lv_color_hex(0xFFFFFF), LV_PART_MAIN);
+
+          if (id(fan_direction_supported)) {
+            lv_obj_clear_flag(id(btn_fan_direction), LV_OBJ_FLAG_HIDDEN);
+          } else {
+            lv_obj_add_flag(id(btn_fan_direction), LV_OBJ_FLAG_HIDDEN);
+          }
 
           if (id(fan_has_lid)) {
             lv_obj_clear_flag(id(btn_fan_lid), LV_OBJ_FLAG_HIDDEN);
@@ -338,7 +409,7 @@ lvgl:
 
               - obj:
                   id: fan_title_pill
-                  x: 81
+                  x: 62
                   y: 143
                   width: 116
                   height: 22
@@ -357,7 +428,7 @@ lvgl:
 
               - obj:
                   id: btn_fan_direction
-                  x: 61
+                  x: 71
                   y: 177
                   width: 36
                   height: 36
@@ -381,7 +452,7 @@ lvgl:
 
               - obj:
                   id: btn_fan_power
-                  x: 123
+                  x: 133
                   y: 177
                   width: 36
                   height: 36
@@ -401,8 +472,10 @@ lvgl:
                   on_click:
                     - script.execute: toggle_fan_onoff
                   widgets:
-                    - image:
-                        src: fan_img_power
+                    - label:
+                        text: ${icon_fan_power}
+                        text_font: font_mdi_fan
+                        text_color: 0xFFFFFF
                         align: CENTER
                         clickable: false
 
@@ -423,8 +496,10 @@ lvgl:
                   on_click:
                     - script.execute: open_fan_lid
                   widgets:
-                    - image:
-                        src: fan_img_lid
+                    - label:
+                        text: ${icon_fan_lid}
+                        text_font: font_mdi_fan
+                        text_color: 0xFFFFFF
                         align: CENTER
                         clickable: false
 
@@ -487,8 +562,10 @@ lvgl:
                   on_click:
                     - script.execute: toggle_fan_lid
                   widgets:
-                    - image:
-                        src: fan_img_lid
+                    - label:
+                        text: ${icon_fan_lid}
+                        text_font: font_mdi_fan
+                        text_color: 0xFFFFFF
                         align: CENTER
                         y: -14
                         clickable: false

@@ -1,9 +1,7 @@
-image:
-  - file: src/assets/images/light.png   # reuse existing bundled icon; swap for a dedicated switch icon later if you like
-    id: switch_img_onoff
-    type: RGB565
-    transparency: alpha_channel
-    resize: 36x36
+substitutions:
+  # MDI glyph codepoint, read directly from the bundled
+  # materialdesignicons-webfont.ttf's cmap (not guessed).
+  icon_switch_onoff: "\U000F0521"  # mdi-toggle-switch
 
 font:
   - file:
@@ -14,6 +12,13 @@ font:
     size: 14
     bpp: 4
     glyphs: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .-_%/"
+
+  - file: src/assets/fonts/materialdesignicons-webfont.ttf
+    id: font_mdi_switch
+    size: 36
+    bpp: 4
+    glyphs:
+      - ${icon_switch_onoff}
 
 color:
   - id: col_switch_bg
@@ -170,7 +175,7 @@ lvgl:
                   id: switch_onoff_btn
                   align: CENTER
                   x: 0
-                  y: 0
+                  y: 15
                   width: 130
                   height: 130
                   radius: 65
@@ -189,8 +194,10 @@ lvgl:
                   on_click:
                     - script.execute: toggle_active_switch
                   widgets:
-                    - image:
-                        src: switch_img_onoff
+                    - label:
+                        text: ${icon_switch_onoff}
+                        text_font: font_mdi_switch
+                        text_color: 0xFFFFFF
                         align: CENTER
                         y: -14
                         clickable: false

@@ -1,23 +1,25 @@
-image:
-  - file: "src/assets/images/palette.png"
-    id: light_img_palette
-    type: RGB565
-    transparency: alpha_channel
-    resize: 22x22
-
-  - file: src/assets/images/light.png
-    id: light_img_dengguang
-    type: RGB565
-    transparency: alpha_channel
-    resize: 20x20
-
-  - file: src/assets/images/light.png
-    id: light_img_dengguang_onoff
-    type: RGB565
-    transparency: alpha_channel
-    resize: 36x36
+substitutions:
+  # MDI glyph codepoints, read directly from the bundled
+  # materialdesignicons-webfont.ttf's cmap (not guessed).
+  icon_light_palette: "\U000F03D8"   # mdi-palette
+  icon_light_bulb: "\U000F0335"      # mdi-lightbulb
 
 font:
+  - file: src/assets/fonts/materialdesignicons-webfont.ttf
+    id: font_mdi_light_small
+    size: 20
+    bpp: 4
+    glyphs:
+      - ${icon_light_palette}
+      - ${icon_light_bulb}
+
+  - file: src/assets/fonts/materialdesignicons-webfont.ttf
+    id: font_mdi_light_big
+    size: 36
+    bpp: 4
+    glyphs:
+      - ${icon_light_bulb}
+
   - file:
       family: DM+Sans
       weight: 900
@@ -421,9 +423,22 @@ script:
           condition:
             lambda: 'return id(light_on) && id(light_supports_brightness);'
           then:
-            - lambda: |-
-                id(light_brightness_action_sent) = true;
-            - script.execute: send_light_turn_on
+            - if:
+                # brightness_pct: 0 is a no-op "stay on at 0%" for most HA
+                # light integrations, not an actual off command -- send a
+                # real light.turn_off and sync light_on so a subsequent
+                # toggle-on isn't acting on stale state (see
+                # toggle_light_onoff, which restores a real brightness when
+                # switching back on from here).
+                condition:
+                  lambda: 'return id(light_requested_brightness) <= 0;'
+                then:
+                  - lambda: 'id(light_on) = false;'
+                  - script.execute: send_light_turn_off
+                else:
+                  - lambda: |-
+                      id(light_brightness_action_sent) = true;
+                  - script.execute: send_light_turn_on
       - delay: 600ms
       - lambda: |-
           id(light_user_adjusting) = false;
@@ -467,11 +482,22 @@ script:
     then:
       - lambda: |-
           id(light_on) = !id(light_on);
+          // Sending light.turn_on with brightness_pct: 0 is a no-op for most
+          // HA light integrations (0% reads as "stay off"). If the stored
+          // brightness was dimmed to 0 before the light went off, restore
+          // the last known HA brightness (or a safe floor) so turning back
+          // on actually turns the light on.
+          if (id(light_on) && id(light_supports_brightness) && id(light_brightness) <= 0) {
+            int restored = id(light_last_ha_brightness);
+            id(light_brightness) = (restored > 0) ? restored : 1;
+            id(light_requested_brightness) = id(light_brightness);
+          }
           lv_color_t col = id(light_on)
             ? lv_color_make(id(light_color_r), id(light_color_g), id(light_color_b))
             : lv_color_hex(0x262626);
           lv_obj_set_style_border_color(id(btn_dengguang), col, LV_STATE_DEFAULT);
           lv_obj_set_style_shadow_color(id(btn_dengguang), col, LV_STATE_DEFAULT);
+      - script.execute: refresh_light_arc
       - if:
           condition:
             lambda: 'return id(light_on);'
@@ -819,7 +845,7 @@ script:
           lv_obj_add_flag(id(onoff_main_btn), LV_OBJ_FLAG_HIDDEN);
           lv_obj_clear_flag(id(light_title_pill), LV_OBJ_FLAG_HIDDEN);
           lv_obj_set_align(id(light_title_pill), LV_ALIGN_TOP_LEFT);
-          lv_obj_set_x(id(light_title_pill), 81);
+          lv_obj_set_x(id(light_title_pill), 62);
           lv_obj_set_y(id(light_title_pill), 143);
           lv_obj_clear_flag(id(btn_dengguang), LV_OBJ_FLAG_HIDDEN);
 
@@ -952,7 +978,7 @@ lvgl:
 
               - obj:
                   id: light_title_pill
-                  x: 81
+                  x: 62
                   y: 143
                   width: 116
                   height: 22
@@ -972,7 +998,7 @@ lvgl:
 
               - obj:
                   id: btn_palette
-                  x: 61
+                  x: 71
                   y: 177
                   width: 36
                   height: 36
@@ -996,14 +1022,16 @@ lvgl:
                         then:
                           - script.execute: open_colorpicker
                   widgets:
-                    - image:
-                        src: light_img_palette
+                    - label:
+                        text: ${icon_light_palette}
+                        text_font: font_mdi_light_small
+                        text_color: 0xFFFFFF
                         align: CENTER
                         clickable: false
 
               - obj:
                   id: btn_dengguang
-                  x: 123
+                  x: 133
                   y: 177
                   width: 36
                   height: 36
@@ -1023,8 +1051,10 @@ lvgl:
                   on_click:
                     - script.execute: toggle_light_onoff
                   widgets:
-                    - image:
-                        src: light_img_dengguang
+                    - label:
+                        text: ${icon_light_bulb}
+                        text_font: font_mdi_light_small
+                        text_color: 0xFFFFFF
                         align: CENTER
                         clickable: false
 
@@ -1052,9 +1082,11 @@ lvgl:
                   on_click:
                     - script.execute: toggle_light_onoff
                   widgets:
-                    - image:
+                    - label:
                         id: img_onoff_bulb
-                        src: light_img_dengguang_onoff
+                        text: ${icon_light_bulb}
+                        text_font: font_mdi_light_big
+                        text_color: 0xFFFFFF
                         align: CENTER
                         y: -12
                         clickable: false

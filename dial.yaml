@@ -11,6 +11,7 @@ packages:
   light_page:  !include src/pages/light.yaml
   light_selector_page: !include src/pages/light_selector.yaml
   switches_page: !include src/pages/switches.yaml
+  switches_selector_page: !include src/pages/switches_selector.yaml
   fan_page:      !include src/pages/fan.yaml
   air_page:    !include src/pages/air.yaml
   music_page:  !include src/pages/music.yaml
@@ -18,69 +19,65 @@ packages:
   idle:        !include src/main/idle.yaml
 
 external_components:
-      - source: github://rorshanks/m5stack-dial-home-assistant@main
+      # Local source: reads directly from this repo's components/ folder on
+      # every compile, no GitHub push/merge round-trip needed while iterating.
+      - source:
+          type: local
+          path: components
         components: [dial_lights, dial_carousel, dial_switches, dial_fans]
-        refresh: 0s
 
 dial_lights:
-  - entity_id: light.sofa
-    name: Sofá
-    state_sensor: dial_light_sofa_state
-    modes_sensor: dial_light_sofa_modes
-    brightness_sensor: dial_light_sofa_brightness
-    color_sensor: dial_light_sofa_rgb
-    color_mode_sensor: dial_light_sofa_color_mode
-    color_temp_kelvin_sensor: dial_light_sofa_color_temp_kelvin
-    min_color_temp_kelvin_sensor: dial_light_sofa_min_color_temp_kelvin
-    max_color_temp_kelvin_sensor: dial_light_sofa_max_color_temp_kelvin
-  - entity_id: light.mesa
-    name: Mesa
-    state_sensor: dial_light_mesa_state
-    modes_sensor: dial_light_mesa_modes
-    brightness_sensor: dial_light_mesa_brightness
-    color_sensor: dial_light_mesa_rgb
-    color_mode_sensor: dial_light_mesa_color_mode
-    color_temp_kelvin_sensor: dial_light_mesa_color_temp_kelvin
-    min_color_temp_kelvin_sensor: dial_light_mesa_min_color_temp_kelvin
-    max_color_temp_kelvin_sensor: dial_light_mesa_max_color_temp_kelvin
-  - entity_id: light.luces_jardin
-    name: Jardín
-    state_sensor: dial_light_jardin_state
-    modes_sensor: dial_light_jardin_modes
-    brightness_sensor: dial_light_jardin_brightness
-    color_sensor: dial_light_jardin_rgb
-    color_mode_sensor: dial_light_jardin_color_mode
-    color_temp_kelvin_sensor: dial_light_jardin_color_temp_kelvin
-    min_color_temp_kelvin_sensor: dial_light_jardin_min_color_temp_kelvin
-    max_color_temp_kelvin_sensor: dial_light_jardin_max_color_temp_kelvin
+  - entity_id: light.dummy_light
+    name: Dummy Light
+    state_sensor: dial_light_dummy_light_state
+    modes_sensor: dial_light_dummy_light_modes
+    brightness_sensor: dial_light_dummy_light_brightness
+    color_sensor: dial_light_dummy_light_rgb
+    color_mode_sensor: dial_light_dummy_light_color_mode
+    color_temp_kelvin_sensor: dial_light_dummy_light_color_temp_kelvin
+    min_color_temp_kelvin_sensor: dial_light_dummy_light_min_color_temp_kelvin
+    max_color_temp_kelvin_sensor: dial_light_dummy_light_max_color_temp_kelvin
+  - entity_id: light.kitchen_lights_2
+    name: Kitchen 2
+    state_sensor: dial_light_kitchen2_state
+    modes_sensor: dial_light_kitchen2_modes
+    brightness_sensor: dial_light_kitchen2_brightness
+    color_sensor: dial_light_kitchen2_rgb
+    color_mode_sensor: dial_light_kitchen2_color_mode
+    color_temp_kelvin_sensor: dial_light_kitchen2_color_temp_kelvin
+    min_color_temp_kelvin_sensor: dial_light_kitchen2_min_color_temp_kelvin
+    max_color_temp_kelvin_sensor: dial_light_kitchen2_max_color_temp_kelvin
+
 
 dial_switches:
-      - entity_id: switch.water_pump
-        name: Water Pump
-        state_sensor: dial_switch_pump_state
+      - entity_id: switch.waveshare_relay_1
+        name: Relay 1
+        state_sensor: dial_switch_relay1_state
+      - entity_id: switch.waveshare_relay_2
+        name: Relay 2
+        state_sensor: dial_switch_relay2_state
 
 dial_fans:
-      - entity_id: fan.maxxair_vent
-        name: Vent Fan
-        state_sensor: dial_fan_vent_state
-        percentage_sensor: dial_fan_vent_percentage
-        direction_sensor: dial_fan_vent_direction
-        lid_entity_id: cover.maxxair_lid
-        lid_state_sensor: dial_fan_lid_state
+      # No direction_sensor/lid_entity_id -- this fan doesn't support reverse
+      # or a vent lid, and both are optional in the dial_fans schema.
+      - entity_id: fan.living_room_ceiling_fan
+        name: Living Room Fan
+        state_sensor: dial_fan_ceiling_state
+        percentage_sensor: dial_fan_ceiling_percentage
 
 substitutions:
-  timezone: Europe/Madrid
-  light_entity: light.mesa
-  # Remote packages cannot resolve !secret themselves. Set these from the
+  timezone: America/Los_Angeles 
+  light_entity: light.dummy_light
+  ## Remote packages cannot resolve !secret themselves. Set these from the
   # consumer configuration (usually with !secret values in that local file).
   device_name: m5stack-dialv1
   device_friendly_name: M5Stack Dial
-  wifi_ssid: YOUR_WIFI_SSID
-  wifi_password: YOUR_WIFI_PASSWORD
+  wifi_ssid: !secret wifi_ssid
+  wifi_password: !secret wifi_password
   ap_ssid: Dial Fallback Hotspot
   ap_password: change-me-fallback-password
-  # Public dummy key for validation only. Always override before flashing.
-  api_encryption_key: MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=
+  # Real key lives in secrets.yaml (gitignored) on the deploy target, not here.
+  api_encryption_key: !secret api_encryption_key
   ota_password: change-me-ota-password
   screen_dim_timeout: 45s
   screen_return_timeout: 5min
@@ -150,46 +147,16 @@ globals:
     initial_value: 'false'
 
 image:
+  # img_scene/img_light/img_ac/img_music/img_palette/img_brightness/
+  # img_dengguang were declared here but never referenced anywhere (each
+  # page declares its own distinctly-named icons instead) -- confirmed
+  # via grep before removal. logo_img is the boot-screen brand logo, not
+  # a conceptual icon, so it stays a PNG rather than becoming an MDI glyph.
   - file: src/assets/images/logo.png
     id: logo_img
     type: RGB565
     transparency: alpha_channel
     resize: 72x72
-  - file: src/assets/images/scene.png
-    id: img_scene
-    type: RGB565
-    transparency: alpha_channel
-    resize: 24x24
-  - file: src/assets/images/bulb.png
-    id: img_light
-    type: RGB565
-    transparency: alpha_channel
-    resize: 24x24
-  - file: src/assets/images/ac.png
-    id: img_ac
-    type: RGB565
-    transparency: alpha_channel
-    resize: 24x24
-  - file: src/assets/images/music.png
-    id: img_music
-    type: RGB565
-    transparency: alpha_channel
-    resize: 24x24
-  - file: src/assets/images/palette.png
-    id: img_palette
-    type: RGB565
-    transparency: alpha_channel
-    resize: 24x24
-  - file: src/assets/images/brightness.png
-    id: img_brightness
-    type: RGB565
-    transparency: alpha_channel
-    resize: 24x24
-  - file: src/assets/images/light.png
-    id: img_dengguang
-    type: RGB565
-    transparency: alpha_channel
-    resize: 24x24
 
 color:
   - id: col_bg
