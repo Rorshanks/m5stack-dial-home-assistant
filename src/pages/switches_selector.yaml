@@ -1,0 +1,616 @@
+globals:
+  - id: in_switches_selector
+    type: bool
+    initial_value: 'false'
+  - id: switches_selector_encoder_accum
+    type: int
+    initial_value: '0'
+
+dial_carousel:
+  - id: switches_selector_carousel
+    lateral_title_opa_max: 120
+    titles_are_overlays: true
+    slots:
+      - container: sws_slot_far_up
+        icon: sws_slot_far_up_img
+        title: sws_overlay_far_up_lbl
+      - container: sws_slot_near_up
+        icon: sws_slot_near_up_img
+        title: sws_overlay_near_up_lbl
+      - container: sws_slot_center
+        icon: sws_slot_center_img
+        title: sws_slot_center_lbl
+      - container: sws_slot_near_dn
+        icon: sws_slot_near_dn_img
+        title: sws_overlay_near_dn_lbl
+      - container: sws_slot_far_dn
+        icon: sws_slot_far_dn_img
+        title: sws_overlay_far_dn_lbl
+    center_bar: sws_slot_center_bar
+    center_sub: sws_slot_center_sub
+
+script:
+  - id: switches_selector_scroll_up
+    then:
+      - if:
+          condition:
+            lambda: |-
+              return id(dial_switches_id).switch_count() > 0 &&
+                     !id(switches_selector_carousel).is_animating();
+          then:
+            - lambda: |-
+                auto on_ready = +[](void *ctx) {
+                  id(dial_switches_id).select_previous();
+                  id(refresh_switches_selector).execute();
+                };
+                if (!id(switches_selector_carousel).start_animation(
+                        esphome::dial_carousel::CarouselDirection::UP, 54, on_ready, nullptr)) {
+                  return;
+                }
+
+  - id: switches_selector_scroll_down
+    then:
+      - if:
+          condition:
+            lambda: |-
+              return id(dial_switches_id).switch_count() > 0 &&
+                     !id(switches_selector_carousel).is_animating();
+          then:
+            - lambda: |-
+                auto on_ready = +[](void *ctx) {
+                  id(dial_switches_id).select_next();
+                  id(refresh_switches_selector).execute();
+                };
+                if (!id(switches_selector_carousel).start_animation(
+                        esphome::dial_carousel::CarouselDirection::DOWN, 64, on_ready, nullptr)) {
+                  return;
+                }
+
+  - id: refresh_switches_selector
+    then:
+      - lambda: |-
+          auto format_subtitle = [](const esphome::dial_switches::SwitchCardSnapshot &s, char *buf, size_t len) {
+            if (!s.state_valid) {
+              snprintf(buf, len, "N/A");
+              return;
+            }
+            snprintf(buf, len, s.is_on ? "ON" : "OFF");
+          };
+
+          struct CardColors {
+            uint32_t accent;
+            uint32_t pill_bg;
+          };
+
+          auto colors_for_snapshot = [&](const esphome::dial_switches::SwitchCardSnapshot &s) -> CardColors {
+            if (s.state_valid && s.is_on) {
+              return CardColors{0x4ADE80, 0x0A2A17};
+            }
+            return CardColors{0x282729, 0x232A38};
+          };
+
+          auto apply_icon_state = [&](lv_obj_t *img, const esphome::dial_switches::SwitchCardSnapshot &snap,
+                                      const esphome::dial_carousel::CarouselSlotLayout &layout, bool is_center) {
+            const CardColors cc = colors_for_snapshot(snap);
+            const bool inactive = !snap.state_valid || !snap.is_on;
+
+            lv_obj_set_style_img_recolor(img, lv_color_hex(cc.accent), LV_PART_MAIN);
+            lv_obj_set_style_img_recolor_opa(img, inactive ? 160 : 255, LV_PART_MAIN);
+
+            int icon_opa = layout.opa_icon;
+            if (is_center) {
+              icon_opa = icon_opa > 0 ? icon_opa : (inactive ? 96 : 255);
+            }
+            if (inactive && icon_opa > 0) {
+              icon_opa = icon_opa * 75 / 100;
+            }
+            lv_obj_set_style_opa(img, icon_opa, LV_PART_MAIN);
+          };
+
+          auto style_dot = [](lv_obj_t *dot, bool selected, uint32_t accent) {
+            if (selected) {
+              lv_obj_set_style_bg_color(dot, lv_color_hex(accent), LV_PART_MAIN);
+              lv_obj_set_style_opa(dot, 255, LV_PART_MAIN);
+              lv_obj_set_size(dot, 8, 8);
+              lv_obj_set_style_radius(dot, 0, LV_PART_MAIN);
+              lv_obj_set_style_transform_angle(dot, 450, LV_PART_MAIN);
+            } else {
+              lv_obj_set_style_bg_color(dot, lv_color_hex(0x2A3348), LV_PART_MAIN);
+              lv_obj_set_style_opa(dot, 180, LV_PART_MAIN);
+              lv_obj_set_size(dot, 4, 4);
+              lv_obj_set_style_radius(dot, 2, LV_PART_MAIN);
+              lv_obj_set_style_transform_angle(dot, 0, LV_PART_MAIN);
+            }
+          };
+
+          // Identical windowing math to light_selector's resolve_light_index --
+          // handles count==0/1/2 edge cases, then plain modulo wraparound for count>=3.
+          auto resolve_switch_index = [](size_t count, size_t active, int offset, size_t &idx) -> bool {
+            if (count == 0)
+              return false;
+            if (count == 1) {
+              if (offset == 0) { idx = 0; return true; }
+              return false;
+            }
+            if (count == 2) {
+              if (offset == 0) { idx = active; return true; }
+              const size_t other = (active + 1) % 2;
+              if (offset == -1 && active == 1) { idx = other; return true; }
+              if (offset == 1 && active == 0) { idx = other; return true; }
+              return false;
+            }
+            idx = (static_cast<int>(active) + offset + static_cast<int>(count)) % static_cast<int>(count);
+            return true;
+          };
+
+          auto paint_lateral = [&](size_t index, lv_obj_t *slot, lv_obj_t *img, lv_obj_t *lbl,
+                                   const esphome::dial_carousel::CarouselSlotLayout &layout) {
+            const auto snap = id(dial_switches_id).card_snapshot_at(index);
+            lv_label_set_text(lbl, snap.name.c_str());
+            lv_obj_set_style_text_color(lbl, lv_color_hex(0x6B7FCC), LV_PART_MAIN);
+            apply_icon_state(img, snap, layout, false);
+            lv_obj_set_style_bg_color(slot, lv_color_hex(0x0D1537), LV_PART_MAIN);
+            lv_obj_set_style_bg_opa(slot, layout.opa_bg, LV_PART_MAIN);
+            lv_obj_set_style_border_width(slot, 0, LV_PART_MAIN);
+          };
+
+          auto paint_empty_lateral = [&](lv_obj_t *slot, lv_obj_t *img, lv_obj_t *lbl,
+                                           const esphome::dial_carousel::CarouselSlotLayout &layout) {
+            lv_label_set_text(lbl, "");
+            lv_obj_set_style_opa(img, 0, LV_PART_MAIN);
+            lv_obj_set_style_img_recolor_opa(img, 0, LV_PART_MAIN);
+            lv_obj_set_style_bg_color(slot, lv_color_hex(0x0D1537), LV_PART_MAIN);
+            lv_obj_set_style_bg_opa(slot, layout.opa_bg, LV_PART_MAIN);
+            lv_obj_set_style_border_width(slot, 0, LV_PART_MAIN);
+          };
+
+          auto paint_center = [&](size_t index, const esphome::dial_carousel::CarouselSlotLayout &layout) {
+            const auto snap = id(dial_switches_id).card_snapshot_at(index);
+            const CardColors cc = colors_for_snapshot(snap);
+            char subbuf[8];
+            format_subtitle(snap, subbuf, sizeof(subbuf));
+
+            lv_obj_t *slot = id(sws_slot_center);
+            lv_obj_t *img = id(sws_slot_center_img);
+            lv_obj_t *lbl = id(sws_slot_center_lbl);
+            lv_obj_t *sub = id(sws_slot_center_sub);
+
+            lv_label_set_text(lbl, snap.name.c_str());
+            lv_label_set_text(sub, subbuf);
+
+            lv_obj_set_style_bg_color(slot, lv_color_hex(cc.pill_bg), LV_PART_MAIN);
+            lv_obj_set_style_bg_opa(slot, (!snap.state_valid || !snap.is_on) ? 90 : 128, LV_PART_MAIN);
+            lv_obj_set_style_border_color(slot, lv_color_hex(cc.accent), LV_PART_MAIN);
+            lv_obj_set_style_border_width(slot, 2, LV_PART_MAIN);
+            lv_obj_set_style_border_opa(slot, 255, LV_PART_MAIN);
+
+            lv_color_t title_col = (!snap.state_valid || !snap.is_on)
+                ? lv_color_hex(0x6B7FCC) : lv_color_hex(0x4ADE80);
+            apply_icon_state(img, snap, layout, true);
+            lv_obj_set_style_text_color(lbl, title_col, LV_PART_MAIN);
+            lv_obj_set_style_text_color(sub, title_col, LV_PART_MAIN);
+            lv_obj_set_style_opa(lbl, layout.opa_text > 0 ? layout.opa_text : 255, LV_PART_MAIN);
+            lv_obj_set_style_opa(sub, layout.opa_text > 0 ? layout.opa_text : 255, LV_PART_MAIN);
+
+            int bx = layout.x - 10;
+            int by = layout.y + 12;
+            lv_obj_set_pos(id(sws_slot_center_bar), bx, by);
+            lv_obj_set_style_bg_color(id(sws_slot_center_bar), lv_color_hex(cc.accent), LV_PART_MAIN);
+            lv_obj_set_style_opa(id(sws_slot_center_bar), layout.opa_text > 0 ? layout.opa_text : 255, LV_PART_MAIN);
+          };
+
+          const size_t count = id(dial_switches_id).switch_count();
+          const size_t active = id(dial_switches_id).active_index();
+          const int OFFSETS[5] = {-2, -1, 0, 1, 2};
+
+          lv_obj_t *slots[5] = {
+            id(sws_slot_far_up), id(sws_slot_near_up), id(sws_slot_center),
+            id(sws_slot_near_dn), id(sws_slot_far_dn)
+          };
+          lv_obj_t *icons[5] = {
+            id(sws_slot_far_up_img), id(sws_slot_near_up_img), id(sws_slot_center_img),
+            id(sws_slot_near_dn_img), id(sws_slot_far_dn_img)
+          };
+          lv_obj_t *title_lbls[5] = {
+            id(sws_overlay_far_up_lbl), id(sws_overlay_near_up_lbl), id(sws_slot_center_lbl),
+            id(sws_overlay_near_dn_lbl), id(sws_overlay_far_dn_lbl)
+          };
+          lv_obj_t *dots[5] = {id(sws_dot_0), id(sws_dot_1), id(sws_dot_2), id(sws_dot_3), id(sws_dot_4)};
+
+          if (count == 0) {
+            for (int slot = 0; slot < 5; slot++) {
+              const auto layout = id(switches_selector_carousel).compute_static_layout(slot, 54);
+              id(switches_selector_carousel).apply_container_geometry(slot, layout);
+              id(switches_selector_carousel).apply_title_layout(slot, layout);
+              lv_label_set_text(title_lbls[slot], "");
+              lv_obj_set_style_opa(icons[slot], 0, LV_PART_MAIN);
+              lv_obj_set_style_img_recolor_opa(icons[slot], 0, LV_PART_MAIN);
+              lv_obj_set_style_bg_opa(slots[slot], LV_OPA_TRANSP, LV_PART_MAIN);
+            }
+            lv_label_set_text(id(sws_slot_center_sub), "");
+            lv_obj_set_style_opa(id(sws_slot_center_sub), 0, LV_PART_MAIN);
+            lv_obj_set_style_opa(id(sws_slot_center_bar), 0, LV_PART_MAIN);
+            for (int d = 0; d < 5; d++) {
+              lv_obj_add_flag(dots[d], LV_OBJ_FLAG_HIDDEN);
+            }
+            return;
+          }
+
+          for (int slot = 0; slot < 5; slot++) {
+            const auto layout = id(switches_selector_carousel).compute_static_layout(slot, 54);
+            id(switches_selector_carousel).apply_container_geometry(slot, layout);
+
+            size_t sw_idx = 0;
+            if (resolve_switch_index(count, active, OFFSETS[slot], sw_idx)) {
+              if (slot == 2) {
+                paint_center(sw_idx, layout);
+              } else {
+                paint_lateral(sw_idx, slots[slot], icons[slot], title_lbls[slot], layout);
+              }
+            } else if (slot == 2) {
+              paint_center(active, layout);
+            } else {
+              paint_empty_lateral(slots[slot], icons[slot], title_lbls[slot], layout);
+            }
+            id(switches_selector_carousel).apply_title_layout(slot, layout);
+          }
+
+          lv_obj_set_style_border_width(id(sws_slot_center), 0, LV_PART_MAIN);
+
+          const auto center_snap = id(dial_switches_id).card_snapshot_at(active);
+          uint32_t dot_accent = (center_snap.state_valid && center_snap.is_on) ? 0x4ADE80 : 0x576BFE;
+
+          if (count <= 5) {
+            for (int d = 0; d < 5; d++) {
+              if (d < static_cast<int>(count)) {
+                lv_obj_clear_flag(dots[d], LV_OBJ_FLAG_HIDDEN);
+                style_dot(dots[d], d == static_cast<int>(active), dot_accent);
+              } else {
+                lv_obj_add_flag(dots[d], LV_OBJ_FLAG_HIDDEN);
+              }
+            }
+          } else {
+            const int sel_dot = (count > 1) ? static_cast<int>(active * 4 / (count - 1)) : 0;
+            for (int d = 0; d < 5; d++) {
+              lv_obj_clear_flag(dots[d], LV_OBJ_FLAG_HIDDEN);
+              style_dot(dots[d], d == sel_dot, dot_accent);
+            }
+          }
+
+  - id: open_switches_selector
+    then:
+      - if:
+          condition:
+            lambda: 'return id(dial_switches_id).switch_count() > 1;'
+          then:
+            - globals.set: {id: in_switches_selector, value: 'true'}
+            - globals.set: {id: in_menu, value: 'false'}
+            - globals.set: {id: in_switches, value: 'false'}
+            - globals.set: {id: switches_selector_encoder_accum, value: '0'}
+            - script.execute: refresh_switches_selector
+            - lvgl.page.show:
+                id: page_switches_selector
+                animation: MOVE_LEFT
+
+  - id: open_switches_selector_back
+    then:
+      - globals.set: {id: in_switches_selector, value: 'true'}
+      - globals.set: {id: in_menu, value: 'false'}
+      - globals.set: {id: in_switches, value: 'false'}
+      - globals.set: {id: switches_selector_encoder_accum, value: '0'}
+      - script.execute: refresh_switches_selector
+      - lvgl.page.show:
+          id: page_switches_selector
+          animation: MOVE_RIGHT
+
+  - id: close_switches_selector
+    then:
+      - globals.set: {id: in_switches_selector, value: 'false'}
+      - globals.set: {id: switches_selector_encoder_accum, value: '0'}
+      - script.execute: open_menu_back
+
+  - id: switches_selector_confirm
+    then:
+      - if:
+          condition:
+            lambda: 'return id(dial_switches_id).switch_count() > 0;'
+          then:
+            - lambda: |-
+                id(dial_switches_id).select_switch(id(dial_switches_id).active_index());
+                ESP_LOGI("switches_selector", "selected index=%u name=%s entity_id=%s",
+                         static_cast<unsigned>(id(dial_switches_id).active_index()),
+                         id(dial_switches_id).active_name().c_str(),
+                         id(dial_switches_id).active_entity_id().c_str());
+            - script.execute: open_selected_switch
+
+lvgl:
+  pages:
+    - id: page_switches_selector
+      bg_color: col_switch_bg
+      bg_opa: COVER
+      scrollbar_mode: "OFF"
+      on_load:
+        - lambda: |-
+            lv_obj_t *static_objects[] = {
+              id(switches_selector_root), id(sws_stack)
+            };
+            for (auto *obj : static_objects) {
+              lv_obj_clear_flag(obj, LV_OBJ_FLAG_SCROLLABLE);
+              lv_obj_set_scrollbar_mode(obj, LV_SCROLLBAR_MODE_OFF);
+            }
+            lv_obj_move_foreground(id(sws_overlay_far_up_lbl));
+            lv_obj_move_foreground(id(sws_overlay_near_up_lbl));
+            lv_obj_move_foreground(id(sws_overlay_near_dn_lbl));
+            lv_obj_move_foreground(id(sws_overlay_far_dn_lbl));
+            auto *overlay_parent = lv_obj_get_parent(id(sws_overlay_near_up_lbl));
+            if (overlay_parent != nullptr) {
+              lv_obj_update_layout(overlay_parent);
+            }
+        - script.execute: refresh_switches_selector
+      widgets:
+        - obj:
+            id: switches_selector_root
+            align: CENTER
+            width: 240
+            height: 240
+            radius: 120
+            clip_corner: true
+            bg_color: col_switch_bg
+            bg_opa: COVER
+            border_width: 0
+            scrollbar_mode: "OFF"
+            pad_all: 0
+            widgets:
+              - obj:
+                  id: sws_stack
+                  align: TOP_LEFT
+                  x: 0
+                  y: 0
+                  width: 240
+                  height: 240
+                  bg_opa: TRANSP
+                  border_width: 0
+                  scrollbar_mode: "OFF"
+                  pad_all: 0
+                  clickable: false
+                  widgets:
+                    - obj:
+                        id: sws_slot_far_up
+                        align: TOP_MID
+                        y: 6
+                        width: 180
+                        height: 40
+                        bg_opa: TRANSP
+                        border_width: 0
+                        scrollbar_mode: "OFF"
+                        pad_all: 0
+                        clickable: false
+                        widgets:
+                          - image:
+                              id: sws_slot_far_up_img
+                              align: LEFT_MID
+                              x: 2
+                              src: menu_img_switch
+                    - obj:
+                        id: sws_slot_near_up
+                        align: TOP_MID
+                        y: 42
+                        width: 180
+                        height: 40
+                        bg_opa: TRANSP
+                        border_width: 0
+                        scrollbar_mode: "OFF"
+                        pad_all: 0
+                        clickable: false
+                        widgets:
+                          - image:
+                              id: sws_slot_near_up_img
+                              align: LEFT_MID
+                              x: 2
+                              src: menu_img_switch
+                    - obj:
+                        id: sws_slot_center_bar
+                        align: TOP_MID
+                        y: 108
+                        x: -96
+                        width: 6
+                        height: 32
+                        radius: 3
+                        bg_color: col_menu_accent
+                        bg_opa: TRANSP
+                        border_width: 0
+                        scrollbar_mode: "OFF"
+                        pad_all: 0
+                        clickable: false
+                    - obj:
+                        id: sws_slot_center
+                        align: TOP_MID
+                        y: 102
+                        width: 168
+                        height: 56
+                        radius: 28
+                        bg_color: col_menu_pill
+                        bg_opa: COVER
+                        border_width: 0
+                        scrollbar_mode: "OFF"
+                        pad_all: 0
+                        clickable: false
+                        widgets:
+                          - image:
+                              id: sws_slot_center_img
+                              align: LEFT_MID
+                              x: 14
+                              src: menu_img_switch
+                          - label:
+                              id: sws_slot_center_lbl
+                              x: 54
+                              y: 6
+                              width: 106
+                              long_mode: DOT
+                              text_font: font_menu_item
+                              text_color: col_text_pri
+                              text: ""
+                          - label:
+                              id: sws_slot_center_sub
+                              x: 54
+                              y: 30
+                              width: 106
+                              long_mode: DOT
+                              text_font: font_menu_sub
+                              text_color: col_menu_val
+                              text: ""
+                    - obj:
+                        id: sws_slot_near_dn
+                        align: TOP_MID
+                        y: 162
+                        width: 180
+                        height: 40
+                        bg_opa: TRANSP
+                        border_width: 0
+                        scrollbar_mode: "OFF"
+                        pad_all: 0
+                        clickable: false
+                        widgets:
+                          - image:
+                              id: sws_slot_near_dn_img
+                              align: LEFT_MID
+                              x: 2
+                              src: menu_img_switch
+                    - obj:
+                        id: sws_slot_far_dn
+                        align: TOP_MID
+                        y: 198
+                        width: 180
+                        height: 40
+                        bg_opa: TRANSP
+                        border_width: 0
+                        scrollbar_mode: "OFF"
+                        pad_all: 0
+                        clickable: false
+                        widgets:
+                          - image:
+                              id: sws_slot_far_dn_img
+                              align: LEFT_MID
+                              x: 2
+                              src: menu_img_switch
+              - label:
+                  id: sws_overlay_far_up_lbl
+                  align: TOP_LEFT
+                  x: 0
+                  y: 0
+                  width: 118
+                  height: 16
+                  text_align: LEFT
+                  text_font: font_light_selector_near
+                  text_color: 0x6B7FCC
+                  long_mode: DOT
+                  bg_opa: TRANSP
+                  opa: TRANSP
+                  text: ""
+              - label:
+                  id: sws_overlay_near_up_lbl
+                  align: TOP_LEFT
+                  x: 0
+                  y: 0
+                  width: 118
+                  height: 16
+                  text_align: LEFT
+                  text_font: font_light_selector_near
+                  text_color: 0x6B7FCC
+                  long_mode: DOT
+                  bg_opa: TRANSP
+                  opa: TRANSP
+                  text: ""
+              - label:
+                  id: sws_overlay_near_dn_lbl
+                  align: TOP_LEFT
+                  x: 0
+                  y: 0
+                  width: 118
+                  height: 16
+                  text_align: LEFT
+                  text_font: font_light_selector_near
+                  text_color: 0x6B7FCC
+                  long_mode: DOT
+                  bg_opa: TRANSP
+                  opa: TRANSP
+                  text: ""
+              - label:
+                  id: sws_overlay_far_dn_lbl
+                  align: TOP_LEFT
+                  x: 0
+                  y: 0
+                  width: 118
+                  height: 16
+                  text_align: LEFT
+                  text_font: font_light_selector_near
+                  text_color: 0x6B7FCC
+                  long_mode: DOT
+                  bg_opa: TRANSP
+                  opa: TRANSP
+                  text: ""
+              - obj:
+                  id: sws_dot_0
+                  align: RIGHT_MID
+                  x: -10
+                  y: -28
+                  width: 5
+                  height: 5
+                  radius: 3
+                  bg_color: col_menu_sdot_dim
+                  bg_opa: COVER
+                  border_width: 0
+                  clickable: false
+                  scrollbar_mode: "OFF"
+              - obj:
+                  id: sws_dot_1
+                  align: RIGHT_MID
+                  x: -10
+                  y: -14
+                  width: 5
+                  height: 5
+                  radius: 3
+                  bg_color: col_menu_sdot_dim
+                  bg_opa: COVER
+                  border_width: 0
+                  clickable: false
+                  scrollbar_mode: "OFF"
+              - obj:
+                  id: sws_dot_2
+                  align: RIGHT_MID
+                  x: -10
+                  y: 0
+                  width: 5
+                  height: 5
+                  radius: 3
+                  bg_color: col_menu_accent
+                  bg_opa: COVER
+                  border_width: 0
+                  clickable: false
+                  scrollbar_mode: "OFF"
+              - obj:
+                  id: sws_dot_3
+                  align: RIGHT_MID
+                  x: -10
+                  y: 14
+                  width: 5
+                  height: 5
+                  radius: 3
+                  bg_color: col_menu_sdot_dim
+                  bg_opa: COVER
+                  border_width: 0
+                  clickable: false
+                  scrollbar_mode: "OFF"
+              - obj:
+                  id: sws_dot_4
+                  align: RIGHT_MID
+                  x: -10
+                  y: 28
+                  width: 5
+                  height: 5
+                  radius: 3
+                  bg_color: col_menu_sdot_dim
+                  bg_opa: COVER
+                  border_width: 0
+                  clickable: false
+                  scrollbar_mode: "OFF"

@@ -168,9 +168,9 @@ script:
           id(in_music) = false;
           id(in_timer) = false;
           id(in_switches) = false;
+          id(in_switches_selector) = false;
           id(in_fan) = false;
           id(in_fan_lid) = false;
-
 
   - id: dial_idle_return_to_clock
     then:
@@ -178,7 +178,8 @@ script:
           condition:
             lambda: |-
               if (id(in_menu) || id(in_light_selector) || id(in_light) || id(in_colorpicker) ||
-                  id(in_air) || id(in_music) || id(in_switches) || id(in_fan) || id(in_fan_lid))
+                  id(in_air) || id(in_music) ||
+                  id(in_switches) || id(in_switches_selector) || id(in_fan) || id(in_fan_lid))
                 return true;
               if (id(in_timer)) return true;
               return false;

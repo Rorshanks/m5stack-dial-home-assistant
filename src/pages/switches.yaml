@@ -4,11 +4,6 @@ image:
     type: RGB565
     transparency: alpha_channel
     resize: 36x36
-  - file: src/assets/images/light.png
-    id: switch_img_nav
-    type: RGB565
-    transparency: alpha_channel
-    resize: 18x18
 
 font:
   - file:
@@ -36,35 +31,45 @@ globals:
   - id: in_switches
     type: bool
     initial_value: 'false'
+  - id: switch_multiswitch_active
+    type: bool
+    initial_value: 'false'
 
 script:
+  # Entry point from the menu. Mirrors open_light's split: skip the selector
+  # entirely for a single switch, otherwise hand off to switches_selector.yaml.
   - id: open_switches
     then:
       - if:
           condition:
-            lambda: 'return id(dial_switches_id).switch_count() > 0;'
+            lambda: 'return id(dial_switches_id).switch_count() == 1;'
           then:
-            - globals.set: {id: in_switches, value: 'true'}
-            - globals.set: {id: in_menu, value: 'false'}
-            - script.execute: refresh_switches_page
-            - lvgl.page.show:
-                id: page_switches
-                animation: MOVE_LEFT
+            - lambda: 'id(dial_switches_id).select_switch(0);'
+            - script.execute: open_selected_switch
+          else:
+            - if:
+                condition:
+                  lambda: 'return id(dial_switches_id).switch_count() > 1;'
+                then:
+                  - script.execute: open_switches_selector
+
+  # Called by switches_selector_confirm once a switch has been picked, and
+  # directly by open_switches when there's only one switch to begin with.
+  - id: open_selected_switch
+    then:
+      - globals.set: {id: in_switches_selector, value: 'false'}
+      - globals.set: {id: switch_multiswitch_active, value: 'true'}
+      - globals.set: {id: in_switches, value: 'true'}
+      - globals.set: {id: in_menu, value: 'false'}
+      - script.execute: refresh_switches_page
+      - lvgl.page.show:
+          id: page_switches
+          animation: MOVE_LEFT
 
   - id: close_switches
     then:
       - globals.set: {id: in_switches, value: 'false'}
       - script.execute: open_menu_back
-
-  - id: switches_select_next
-    then:
-      - lambda: 'id(dial_switches_id).select_next();'
-      - script.execute: refresh_switches_page
-
-  - id: switches_select_previous
-    then:
-      - lambda: 'id(dial_switches_id).select_previous();'
-      - script.execute: refresh_switches_page
 
   - id: toggle_active_switch
     then:
@@ -74,13 +79,6 @@ script:
             entity_id: "{{ target_entity }}"
           variables:
             target_entity: !lambda 'return id(dial_switches_id).active_entity_id();'
-      # Optimistic UI update -- HA's own state push (dial_switches_sensors.yaml) will correct
-      # this shortly after if the toggle didn't actually take, e.g. entity became unavailable.
-      - lambda: |-
-          bool currently_on = id(dial_switches_id).active_is_on();
-          ESP_LOGI("switches", "toggled %s, optimistic new state=%s",
-                   id(dial_switches_id).active_entity_id().c_str(),
-                   (!currently_on) ? "on" : "off");
       - script.execute: refresh_switches_page
 
   - id: refresh_switches_page
@@ -118,19 +116,6 @@ script:
             lv_obj_set_style_shadow_color(id(switch_onoff_btn), lv_color_hex(0x262626), LV_STATE_DEFAULT);
             lv_obj_set_style_shadow_opa(id(switch_onoff_btn), LV_OPA_20, LV_STATE_DEFAULT);
             lv_obj_set_style_text_color(id(lbl_switch_state), lv_color_hex(0x282729), LV_STATE_DEFAULT);
-          }
-
-          static char posbuf[16];
-          if (count > 1) {
-            snprintf(posbuf, sizeof(posbuf), "%d / %d", (int) id(dial_switches_id).active_index() + 1, (int) count);
-            lv_label_set_text(id(lbl_switch_position), posbuf);
-            lv_obj_clear_flag(id(btn_switch_prev), LV_OBJ_FLAG_HIDDEN);
-            lv_obj_clear_flag(id(btn_switch_next), LV_OBJ_FLAG_HIDDEN);
-            lv_obj_clear_flag(id(lbl_switch_position), LV_OBJ_FLAG_HIDDEN);
-          } else {
-            lv_obj_add_flag(id(btn_switch_prev), LV_OBJ_FLAG_HIDDEN);
-            lv_obj_add_flag(id(btn_switch_next), LV_OBJ_FLAG_HIDDEN);
-            lv_obj_add_flag(id(lbl_switch_position), LV_OBJ_FLAG_HIDDEN);
           }
 
 lvgl:
@@ -216,53 +201,3 @@ lvgl:
                         text: "OFF"
                         text_font: font_switch_label
                         text_color: col_switch_track
-
-              - obj:
-                  id: btn_switch_prev
-                  align: LEFT_MID
-                  x: 8
-                  y: 0
-                  width: 34
-                  height: 34
-                  radius: 17
-                  bg_color: 0x0D1537
-                  bg_opa: COVER
-                  border_width: 0
-                  clickable: true
-                  scrollbar_mode: "OFF"
-                  on_click:
-                    - script.execute: switches_select_previous
-                  widgets:
-                    - image:
-                        src: switch_img_nav
-                        align: CENTER
-                        clickable: false
-
-              - obj:
-                  id: btn_switch_next
-                  align: RIGHT_MID
-                  x: -8
-                  y: 0
-                  width: 34
-                  height: 34
-                  radius: 17
-                  bg_color: 0x0D1537
-                  bg_opa: COVER
-                  border_width: 0
-                  clickable: true
-                  scrollbar_mode: "OFF"
-                  on_click:
-                    - script.execute: switches_select_next
-                  widgets:
-                    - image:
-                        src: switch_img_nav
-                        align: CENTER
-                        clickable: false
-
-              - label:
-                  id: lbl_switch_position
-                  align: BOTTOM_MID
-                  y: -14
-                  text: ""
-                  text_font: font_menu_sub
-                  text_color: col_menu_val

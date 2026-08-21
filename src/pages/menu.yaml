@@ -263,8 +263,11 @@ script:
               }
               break;
             case 2:
-              if (id(dial_switches_id).switch_count() > 0) {
-                id(open_switches).execute();
+              if (id(dial_switches_id).switch_count() == 1) {
+                id(dial_switches_id).select_switch(0);
+                id(open_selected_switch).execute();
+              } else if (id(dial_switches_id).switch_count() > 1) {
+                id(open_switches_selector).execute();
               } else {
                 ESP_LOGW("menu", "Switches selected but dial_switches is empty");
               }
