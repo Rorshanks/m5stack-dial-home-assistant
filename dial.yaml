@@ -27,43 +27,44 @@ external_components:
         components: [dial_lights, dial_carousel, dial_switches, dial_fans]
 
 dial_lights:
-  - entity_id: light.dummy_light
-    name: Dummy Light
-    state_sensor: dial_light_dummy_light_state
-    modes_sensor: dial_light_dummy_light_modes
-    brightness_sensor: dial_light_dummy_light_brightness
-    color_sensor: dial_light_dummy_light_rgb
-    color_mode_sensor: dial_light_dummy_light_color_mode
-    color_temp_kelvin_sensor: dial_light_dummy_light_color_temp_kelvin
-    min_color_temp_kelvin_sensor: dial_light_dummy_light_min_color_temp_kelvin
-    max_color_temp_kelvin_sensor: dial_light_dummy_light_max_color_temp_kelvin
-  - entity_id: light.kitchen_lights_2
-    name: Kitchen 2
-    state_sensor: dial_light_kitchen2_state
-    modes_sensor: dial_light_kitchen2_modes
-    brightness_sensor: dial_light_kitchen2_brightness
-    color_sensor: dial_light_kitchen2_rgb
-    color_mode_sensor: dial_light_kitchen2_color_mode
-    color_temp_kelvin_sensor: dial_light_kitchen2_color_temp_kelvin
-    min_color_temp_kelvin_sensor: dial_light_kitchen2_min_color_temp_kelvin
-    max_color_temp_kelvin_sensor: dial_light_kitchen2_max_color_temp_kelvin
+#  - entity_id: light.dummy_light
+#    name: Dummy Light
+#    state_sensor: dial_light_dummy_light_state
+#    modes_sensor: dial_light_dummy_light_modes
+#    brightness_sensor: dial_light_dummy_light_brightness
+#    color_sensor: dial_light_dummy_light_rgb
+#    color_mode_sensor: dial_light_dummy_light_color_mode
+#    color_temp_kelvin_sensor: dial_light_dummy_light_color_temp_kelvin
+#    min_color_temp_kelvin_sensor: dial_light_dummy_light_min_color_temp_kelvin
+#    max_color_temp_kelvin_sensor: dial_light_dummy_light_max_color_temp_kelvin
+#  - entity_id: light.kitchen_lights_2
+#    name: Kitchen 2
+#    state_sensor: dial_light_kitchen2_state
+#    modes_sensor: dial_light_kitchen2_modes
+#    brightness_sensor: dial_light_kitchen2_brightness
+#    color_sensor: dial_light_kitchen2_rgb
+#    color_mode_sensor: dial_light_kitchen2_color_mode
+#    color_temp_kelvin_sensor: dial_light_kitchen2_color_temp_kelvin
+#    min_color_temp_kelvin_sensor: dial_light_kitchen2_min_color_temp_kelvin
+#    max_color_temp_kelvin_sensor: dial_light_kitchen2_max_color_temp_kelvin
 
 
 dial_switches:
-      - entity_id: switch.waveshare_relay_1
-        name: Relay 1
-        state_sensor: dial_switch_relay1_state
-      - entity_id: switch.waveshare_relay_2
-        name: Relay 2
-        state_sensor: dial_switch_relay2_state
+#      - entity_id: switch.waveshare_relay_1
+#        name: Relay 1
+#        state_sensor: dial_switch_relay1_state
+#      - entity_id: switch.waveshare_relay_2
+#        name: Relay 2
+#        state_sensor: dial_switch_relay2_state
 
 dial_fans:
-      # No direction_sensor/lid_entity_id -- this fan doesn't support reverse
-      # or a vent lid, and both are optional in the dial_fans schema.
-      - entity_id: fan.living_room_ceiling_fan
-        name: Living Room Fan
-        state_sensor: dial_fan_ceiling_state
-        percentage_sensor: dial_fan_ceiling_percentage
+      - entity_id: fan.maxxair_fan_control_maxxair_fan
+        name: Maxxair Fan
+        state_sensor: dial_fan_vent_state
+        percentage_sensor: dial_fan_vent_percentage
+        direction_sensor: dial_fan_vent_direction
+        lid_entity_id: cover.maxxair_fan_control_lid
+        lid_state_sensor: dial_fan_lid_state
 
 substitutions:
   timezone: America/Los_Angeles 
@@ -138,6 +139,8 @@ wifi:
   ap:
     ssid: ${ap_ssid}
     password: ${ap_password}
+  ssid_2: !secret wifi_ssid_2
+  wifi_password_2: !secret wifi_password_2
 
 captive_portal:
 
@@ -147,16 +150,46 @@ globals:
     initial_value: 'false'
 
 image:
-  # img_scene/img_light/img_ac/img_music/img_palette/img_brightness/
-  # img_dengguang were declared here but never referenced anywhere (each
-  # page declares its own distinctly-named icons instead) -- confirmed
-  # via grep before removal. logo_img is the boot-screen brand logo, not
-  # a conceptual icon, so it stays a PNG rather than becoming an MDI glyph.
   - file: src/assets/images/logo.png
     id: logo_img
     type: RGB565
     transparency: alpha_channel
     resize: 72x72
+  - file: src/assets/images/scene.png
+    id: img_scene
+    type: RGB565
+    transparency: alpha_channel
+    resize: 24x24
+  - file: src/assets/images/bulb.png
+    id: img_light
+    type: RGB565
+    transparency: alpha_channel
+    resize: 24x24
+  - file: src/assets/images/ac.png
+    id: img_ac
+    type: RGB565
+    transparency: alpha_channel
+    resize: 24x24
+  - file: src/assets/images/music.png
+    id: img_music
+    type: RGB565
+    transparency: alpha_channel
+    resize: 24x24
+  - file: src/assets/images/palette.png
+    id: img_palette
+    type: RGB565
+    transparency: alpha_channel
+    resize: 24x24
+  - file: src/assets/images/brightness.png
+    id: img_brightness
+    type: RGB565
+    transparency: alpha_channel
+    resize: 24x24
+  - file: src/assets/images/light.png
+    id: img_dengguang
+    type: RGB565
+    transparency: alpha_channel
+    resize: 24x24
 
 color:
   - id: col_bg

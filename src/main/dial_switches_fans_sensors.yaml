@@ -29,20 +29,20 @@ text_sensor:
 
   - platform: homeassistant
     id: dial_fan_vent_state
-    entity_id: fan.maxxair_vent
+    entity_id: fan.maxxair_fan_control_maxxair_fan
     internal: true
     on_value:
       - script.execute: menu_on_ha_update
 
   - platform: homeassistant
     id: dial_fan_vent_direction
-    entity_id: fan.maxxair_vent
+    entity_id: fan.maxxair_fan_control_maxxair_fan
     attribute: direction
     internal: true
 
   - platform: homeassistant
     id: dial_fan_lid_state
-    entity_id: cover.maxxair_lid
+    entity_id: cover.maxxair_fan_control_lid
     internal: true
 
 sensor:
@@ -56,7 +56,7 @@ sensor:
 
   - platform: homeassistant
     id: dial_fan_vent_percentage
-    entity_id: fan.maxxair_vent
+    entity_id: fan.maxxair_fan_control_maxxair_fan
     attribute: percentage
     internal: true
     on_value:
@@ -67,6 +67,6 @@ sensor:
   # lid_position_sensor line in dial.yaml's dial_fans: entry.
   #- platform: homeassistant
   #  id: dial_fan_vent_lid_position
-  #  entity_id: cover.maxxair_lid
+  #  entity_id: cover.maxxair_fan_control_lid
   #  attribute: current_position
   #  internal: true
