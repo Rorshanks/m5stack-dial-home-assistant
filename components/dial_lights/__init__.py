@@ -52,14 +52,16 @@ async def to_code(config):
     for light in config["lights"]:
         entity = light[CONF_ENTITY_ID]
         name = light[CONF_NAME]
-        state = None
-        modes = None
-        brightness = None
-        color = None
-        color_mode = None
-        color_temp_kelvin = None
-        min_color_temp_kelvin = None
-        max_color_temp_kelvin = None
+        # A bare Python None isn't a valid C++ codegen expression -- an
+        # omitted optional sensor needs to render as an actual `nullptr`.
+        state = cg.RawExpression("nullptr")
+        modes = cg.RawExpression("nullptr")
+        brightness = cg.RawExpression("nullptr")
+        color = cg.RawExpression("nullptr")
+        color_mode = cg.RawExpression("nullptr")
+        color_temp_kelvin = cg.RawExpression("nullptr")
+        min_color_temp_kelvin = cg.RawExpression("nullptr")
+        max_color_temp_kelvin = cg.RawExpression("nullptr")
         if CONF_STATE_SENSOR in light:
             state = await cg.get_variable(light[CONF_STATE_SENSOR])
         if CONF_MODES_SENSOR in light:

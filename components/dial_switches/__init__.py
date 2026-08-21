@@ -37,7 +37,9 @@ async def to_code(config):
     for sw in config["switches"]:
         entity = sw[CONF_ENTITY_ID]
         name = sw[CONF_NAME]
-        state = None
+        # A bare Python None isn't a valid C++ codegen expression -- an
+        # omitted optional sensor needs to render as an actual `nullptr`.
+        state = cg.RawExpression("nullptr")
         if CONF_STATE_SENSOR in sw:
             state = await cg.get_variable(sw[CONF_STATE_SENSOR])
         cg.add(var.add_switch(entity, name, state))
