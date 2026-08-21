@@ -421,9 +421,22 @@ script:
           condition:
             lambda: 'return id(light_on) && id(light_supports_brightness);'
           then:
-            - lambda: |-
-                id(light_brightness_action_sent) = true;
-            - script.execute: send_light_turn_on
+            - if:
+                # brightness_pct: 0 is a no-op "stay on at 0%" for most HA
+                # light integrations, not an actual off command -- send a
+                # real light.turn_off and sync light_on so a subsequent
+                # toggle-on isn't acting on stale state (see
+                # toggle_light_onoff, which restores a real brightness when
+                # switching back on from here).
+                condition:
+                  lambda: 'return id(light_requested_brightness) <= 0;'
+                then:
+                  - lambda: 'id(light_on) = false;'
+                  - script.execute: send_light_turn_off
+                else:
+                  - lambda: |-
+                      id(light_brightness_action_sent) = true;
+                  - script.execute: send_light_turn_on
       - delay: 600ms
       - lambda: |-
           id(light_user_adjusting) = false;
@@ -467,11 +480,22 @@ script:
     then:
       - lambda: |-
           id(light_on) = !id(light_on);
+          // Sending light.turn_on with brightness_pct: 0 is a no-op for most
+          // HA light integrations (0% reads as "stay off"). If the stored
+          // brightness was dimmed to 0 before the light went off, restore
+          // the last known HA brightness (or a safe floor) so turning back
+          // on actually turns the light on.
+          if (id(light_on) && id(light_supports_brightness) && id(light_brightness) <= 0) {
+            int restored = id(light_last_ha_brightness);
+            id(light_brightness) = (restored > 0) ? restored : 1;
+            id(light_requested_brightness) = id(light_brightness);
+          }
           lv_color_t col = id(light_on)
             ? lv_color_make(id(light_color_r), id(light_color_g), id(light_color_b))
             : lv_color_hex(0x262626);
           lv_obj_set_style_border_color(id(btn_dengguang), col, LV_STATE_DEFAULT);
           lv_obj_set_style_shadow_color(id(btn_dengguang), col, LV_STATE_DEFAULT);
+      - script.execute: refresh_light_arc
       - if:
           condition:
             lambda: 'return id(light_on);'

@@ -144,27 +144,71 @@ script:
     mode: restart
     then:
       - delay: 250ms
-      - homeassistant.action:
-          action: fan.set_percentage
-          data_template:
-            entity_id: "{{ target_entity }}"
-            percentage: "{{ pct | int }}"
-          variables:
-            target_entity: !lambda 'return id(dial_fans_id).active_entity_id();'
-            pct: !lambda 'return id(fan_requested_percent);'
+      - if:
+          # fan.set_percentage 0 reads as "turn off" on most HA fan
+          # integrations, but doesn't update our local fan_on flag -- send an
+          # explicit turn_off and sync fan_on so the next power-button tap
+          # doesn't act on stale state (see toggle_fan_onoff below).
+          condition:
+            lambda: 'return id(fan_requested_percent) <= 0;'
+          then:
+            - lambda: 'id(fan_on) = false;'
+            - homeassistant.action:
+                action: fan.turn_off
+                data_template:
+                  entity_id: "{{ target_entity }}"
+                variables:
+                  target_entity: !lambda 'return id(dial_fans_id).active_entity_id();'
+          else:
+            - if:
+                condition:
+                  lambda: 'return id(fan_on);'
+                then:
+                  - homeassistant.action:
+                      action: fan.set_percentage
+                      data_template:
+                        entity_id: "{{ target_entity }}"
+                        percentage: "{{ pct | int }}"
+                      variables:
+                        target_entity: !lambda 'return id(dial_fans_id).active_entity_id();'
+                        pct: !lambda 'return id(fan_requested_percent);'
       - lambda: 'id(fan_user_adjusting) = false;'
+      - script.execute: refresh_fan_page
 
   # ---- on/off ----
   - id: toggle_fan_onoff
     then:
-      - lambda: 'id(fan_on) = !id(fan_on);'
-      - homeassistant.action:
-          action: "{{ 'fan.turn_on' if is_on else 'fan.turn_off' }}"
-          data_template:
-            entity_id: "{{ target_entity }}"
-          variables:
-            target_entity: !lambda 'return id(dial_fans_id).active_entity_id();'
-            is_on: !lambda 'return id(fan_on);'
+      - lambda: |-
+          id(fan_on) = !id(fan_on);
+          // If speed was dragged to 0 before the fan went off, restore a
+          // real speed here -- otherwise turning back on leaves the fan
+          // "on" at 0%/undefined, which looks identical to still being off.
+          // active_percent() is the component's live-tracked HA value, kept
+          // current independent of what page is open.
+          if (id(fan_on) && id(fan_percent) <= 0) {
+            int restored = id(dial_fans_id).active_percent_valid() ? id(dial_fans_id).active_percent() : 0;
+            id(fan_percent) = (restored > 0) ? restored : 50;
+            id(fan_requested_percent) = id(fan_percent);
+          }
+      - if:
+          condition:
+            lambda: 'return id(fan_on);'
+          then:
+            - homeassistant.action:
+                action: fan.turn_on
+                data_template:
+                  entity_id: "{{ target_entity }}"
+                  percentage: "{{ pct | int }}"
+                variables:
+                  target_entity: !lambda 'return id(dial_fans_id).active_entity_id();'
+                  pct: !lambda 'return id(fan_percent);'
+          else:
+            - homeassistant.action:
+                action: fan.turn_off
+                data_template:
+                  entity_id: "{{ target_entity }}"
+                variables:
+                  target_entity: !lambda 'return id(dial_fans_id).active_entity_id();'
       - script.execute: refresh_fan_page
 
   # ---- direction ----
