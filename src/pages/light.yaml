@@ -976,7 +976,7 @@ lvgl:
 
               - obj:
                   id: light_title_pill
-                  x: 81
+                  x: 62
                   y: 143
                   width: 116
                   height: 22
@@ -996,7 +996,7 @@ lvgl:
 
               - obj:
                   id: btn_palette
-                  x: 61
+                  x: 71
                   y: 177
                   width: 36
                   height: 36
@@ -1027,7 +1027,7 @@ lvgl:
 
               - obj:
                   id: btn_dengguang
-                  x: 123
+                  x: 133
                   y: 177
                   width: 36
                   height: 36
