@@ -79,6 +79,9 @@ globals:
   - id: fan_direction_reverse
     type: bool
     initial_value: 'false'
+  - id: fan_direction_supported
+    type: bool
+    initial_value: 'false'
   - id: fan_has_lid
     type: bool
     initial_value: 'false'
@@ -99,10 +102,18 @@ script:
             - lambda: |-
                 id(fan_on) = id(dial_fans_id).active_has_valid_state() && id(dial_fans_id).active_is_on();
                 if (id(dial_fans_id).active_percent_valid()) {
-                  id(fan_percent) = id(dial_fans_id).active_percent();
-                  id(fan_requested_percent) = id(fan_percent);
+                  // Speed is only ever set in 10% steps from this page -- snap
+                  // whatever HA reports (which may not be a multiple of 10, e.g.
+                  // before this fan was ever driven from the Dial) to match.
+                  int raw = id(dial_fans_id).active_percent();
+                  int snapped = ((raw + 5) / 10) * 10;
+                  if (snapped > 100) snapped = 100;
+                  if (snapped < 0) snapped = 0;
+                  id(fan_percent) = snapped;
+                  id(fan_requested_percent) = snapped;
                 }
-                id(fan_direction_reverse) = id(dial_fans_id).active_direction_valid() &&
+                id(fan_direction_supported) = id(dial_fans_id).active_direction_valid();
+                id(fan_direction_reverse) = id(fan_direction_supported) &&
                                              id(dial_fans_id).active_direction_reverse();
                 id(fan_has_lid) = id(dial_fans_id).active_has_lid();
                 id(fan_lid_is_open) = id(dial_fans_id).active_lid_state() == esphome::dial_fans::LidState::OPEN;
@@ -121,7 +132,10 @@ script:
   - id: fan_speed_up
     then:
       - lambda: |-
-          int v = id(fan_percent) + 5;
+          // Snap to the nearest 10 first so this always lands on a clean
+          // step (0, 10, 20, ...) even if fan_percent started off-grid.
+          int snapped = ((id(fan_percent) + 5) / 10) * 10;
+          int v = snapped + 10;
           if (v > 100) v = 100;
           id(fan_percent) = v;
           id(fan_requested_percent) = v;
@@ -132,7 +146,8 @@ script:
   - id: fan_speed_down
     then:
       - lambda: |-
-          int v = id(fan_percent) - 5;
+          int snapped = ((id(fan_percent) + 5) / 10) * 10;
+          int v = snapped - 10;
           if (v < 0) v = 0;
           id(fan_percent) = v;
           id(fan_requested_percent) = v;
@@ -214,16 +229,20 @@ script:
   # ---- direction ----
   - id: toggle_fan_direction
     then:
-      - lambda: 'id(fan_direction_reverse) = !id(fan_direction_reverse);'
-      - homeassistant.action:
-          action: fan.set_direction
-          data_template:
-            entity_id: "{{ target_entity }}"
-            direction: "{{ 'reverse' if reverse else 'forward' }}"
-          variables:
-            target_entity: !lambda 'return id(dial_fans_id).active_entity_id();'
-            reverse: !lambda 'return id(fan_direction_reverse);'
-      - script.execute: refresh_fan_page
+      - if:
+          condition:
+            lambda: 'return id(fan_direction_supported);'
+          then:
+            - lambda: 'id(fan_direction_reverse) = !id(fan_direction_reverse);'
+            - homeassistant.action:
+                action: fan.set_direction
+                data_template:
+                  entity_id: "{{ target_entity }}"
+                  direction: "{{ 'reverse' if reverse else 'forward' }}"
+                variables:
+                  target_entity: !lambda 'return id(dial_fans_id).active_entity_id();'
+                  reverse: !lambda 'return id(fan_direction_reverse);'
+            - script.execute: refresh_fan_page
 
   # ---- lid sub-page ----
   - id: open_fan_lid
@@ -299,6 +318,12 @@ script:
 
           lv_obj_set_style_img_recolor(id(fan_img_direction_obj),
               id(fan_direction_reverse) ? lv_color_hex(0x5ABBFD) : lv_color_hex(0xFFFFFF), LV_PART_MAIN);
+
+          if (id(fan_direction_supported)) {
+            lv_obj_clear_flag(id(btn_fan_direction), LV_OBJ_FLAG_HIDDEN);
+          } else {
+            lv_obj_add_flag(id(btn_fan_direction), LV_OBJ_FLAG_HIDDEN);
+          }
 
           if (id(fan_has_lid)) {
             lv_obj_clear_flag(id(btn_fan_lid), LV_OBJ_FLAG_HIDDEN);

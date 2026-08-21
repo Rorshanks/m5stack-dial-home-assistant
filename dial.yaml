@@ -55,13 +55,12 @@ dial_switches:
         state_sensor: dial_switch_dummy_switch_state
 
 dial_fans:
-      - entity_id: fan.dummy_fan
-        name: Dummy Fan
-        state_sensor: dial_fan_dummy_fan_state
-        percentage_sensor: dial_fan_dummy_fan_percentage
-        direction_sensor: dial_fan_dummy_fan_direction
-        lid_entity_id: cover.dummy_fan_lid
-        lid_state_sensor: dial_dummy_fan_lid_state
+      # No direction_sensor/lid_entity_id -- this fan doesn't support reverse
+      # or a vent lid, and both are optional in the dial_fans schema.
+      - entity_id: fan.living_room_ceiling_fan
+        name: Living Room Fan
+        state_sensor: dial_fan_ceiling_state
+        percentage_sensor: dial_fan_ceiling_percentage
 
 substitutions:
   timezone: America/Los_Angeles 

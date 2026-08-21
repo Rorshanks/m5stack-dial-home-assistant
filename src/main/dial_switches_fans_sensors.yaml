@@ -14,8 +14,8 @@ text_sensor:
       - script.execute: menu_on_ha_update
 
   - platform: homeassistant
-    id: dial_fan_dummy_fan_state
-    entity_id: fan.dummy_fan
+    id: dial_fan_ceiling_state
+    entity_id: fan.living_room_ceiling_fan
     internal: true
     on_value:
       - script.execute: menu_on_ha_update
@@ -28,20 +28,9 @@ text_sensor:
       - script.execute: menu_on_ha_update
 
   - platform: homeassistant
-    id: dial_fan_dummy_fan_direction
-    entity_id: fan.dummy_fan
-    attribute: direction
-    internal: true
-
-  - platform: homeassistant
     id: dial_fan_vent_direction
     entity_id: fan.maxxair_vent
     attribute: direction
-    internal: true
-
-  - platform: homeassistant
-    id: dial_dummy_fan_lid_state
-    entity_id: cover.dummy_fan_lid
     internal: true
 
   - platform: homeassistant
@@ -51,8 +40,8 @@ text_sensor:
 
 sensor:
   - platform: homeassistant
-    id: dial_fan_dummy_fan_percentage
-    entity_id: fan.dummy_fan
+    id: dial_fan_ceiling_percentage
+    entity_id: fan.living_room_ceiling_fan
     attribute: percentage
     internal: true
     on_value:
@@ -70,7 +59,7 @@ sensor:
   # If it's open/closed only, leave this commented out along with the
   # lid_position_sensor line in dial.yaml's dial_fans: entry.
   #- platform: homeassistant
-  #  id: dial_dummy_fan_lid_position
-  #  entity_id: cover.dummy_fan_lid
+  #  id: dial_fan_vent_lid_position
+  #  entity_id: cover.maxxair_lid
   #  attribute: current_position
   #  internal: true
