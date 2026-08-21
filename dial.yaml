@@ -19,9 +19,12 @@ packages:
   idle:        !include src/main/idle.yaml
 
 external_components:
-      - source: github://rorshanks/m5stack-dial-home-assistant@main
+      # Local source: reads directly from this repo's components/ folder on
+      # every compile, no GitHub push/merge round-trip needed while iterating.
+      - source:
+          type: local
+          path: components
         components: [dial_lights, dial_carousel, dial_switches, dial_fans]
-        refresh: 0s
 
 dial_lights:
   - entity_id: light.dummy_light
