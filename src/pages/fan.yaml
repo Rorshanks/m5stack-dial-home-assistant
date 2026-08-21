@@ -4,16 +4,6 @@ substitutions:
   icon_fan_power: "\U000F0425"    # mdi-power
   icon_fan_lid: "\U000F111C"      # mdi-window-shutter
 
-image:
-  # fan_img_direction stays a placeholder PNG for now -- the direction
-  # button is getting replaced with plain IN/OUT text next (roadmap item 2),
-  # so converting this icon now would be thrown away immediately after.
-  - file: src/assets/images/ac.png   # placeholder -- swap for real fan/direction/lid icons in src/assets/images/
-    id: fan_img_direction
-    type: RGB565
-    transparency: alpha_channel
-    resize: 22x22
-
 font:
   - file: src/assets/fonts/materialdesignicons-webfont.ttf
     id: font_mdi_fan
@@ -278,6 +268,10 @@ script:
           variables:
             target_entity: !lambda 'return id(dial_fans_id).active_lid_entity_id();'
             opening: !lambda 'return id(fan_lid_is_open);'
+      # Reachable from either the main page's direct toggle button or the
+      # lid sub-page's big button -- refresh both regardless of which is
+      # currently visible (harmless no-op on the hidden one).
+      - script.execute: refresh_fan_page
       - script.execute: refresh_fan_lid_page
 
   - id: refresh_fan_lid_page
@@ -318,7 +312,9 @@ script:
             lv_obj_set_style_shadow_color(id(btn_fan_power), lv_color_hex(0x262626), LV_STATE_DEFAULT);
           }
 
-          lv_obj_set_style_img_recolor(id(fan_img_direction_obj),
+          // Forward = OUT, Reverse = IN.
+          lv_label_set_text(id(fan_img_direction_obj), id(fan_direction_reverse) ? "IN" : "OUT");
+          lv_obj_set_style_text_color(id(fan_img_direction_obj),
               id(fan_direction_reverse) ? lv_color_hex(0x5ABBFD) : lv_color_hex(0xFFFFFF), LV_PART_MAIN);
 
           if (id(fan_direction_supported)) {
@@ -329,8 +325,18 @@ script:
 
           if (id(fan_has_lid)) {
             lv_obj_clear_flag(id(btn_fan_lid), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_clear_flag(id(btn_fan_cover), LV_OBJ_FLAG_HIDDEN);
           } else {
             lv_obj_add_flag(id(btn_fan_lid), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(btn_fan_cover), LV_OBJ_FLAG_HIDDEN);
+          }
+
+          if (id(fan_lid_is_open)) {
+            lv_obj_set_style_border_color(id(btn_fan_cover), lv_color_hex(0x5ABBFD), LV_STATE_DEFAULT);
+            lv_obj_set_style_shadow_color(id(btn_fan_cover), lv_color_hex(0x5ABBFD), LV_STATE_DEFAULT);
+          } else {
+            lv_obj_set_style_border_color(id(btn_fan_cover), lv_color_hex(0x262626), LV_STATE_DEFAULT);
+            lv_obj_set_style_shadow_color(id(btn_fan_cover), lv_color_hex(0x262626), LV_STATE_DEFAULT);
           }
       - lvgl.arc.update:
           id: fan_arc
@@ -428,7 +434,7 @@ lvgl:
 
               - obj:
                   id: btn_fan_direction
-                  x: 71
+                  x: 40
                   y: 177
                   width: 36
                   height: 36
@@ -444,15 +450,17 @@ lvgl:
                   on_click:
                     - script.execute: toggle_fan_direction
                   widgets:
-                    - image:
+                    - label:
                         id: fan_img_direction_obj
-                        src: fan_img_direction
+                        text: "OUT"
+                        text_font: font_fan_label
+                        text_color: 0xFFFFFF
                         align: CENTER
                         clickable: false
 
               - obj:
                   id: btn_fan_power
-                  x: 133
+                  x: 102
                   y: 177
                   width: 36
                   height: 36
@@ -474,6 +482,32 @@ lvgl:
                   widgets:
                     - label:
                         text: ${icon_fan_power}
+                        text_font: font_mdi_fan
+                        text_color: 0xFFFFFF
+                        align: CENTER
+                        clickable: false
+
+              - obj:
+                  id: btn_fan_cover
+                  x: 164
+                  y: 177
+                  width: 36
+                  height: 36
+                  radius: 18
+                  bg_color: col_fan_bg
+                  bg_opa: COVER
+                  border_width: 2
+                  border_color: col_fan_track
+                  border_opa: COVER
+                  clickable: true
+                  scrollbar_mode: "OFF"
+                  scroll_dir: NONE
+                  hidden: true
+                  on_click:
+                    - script.execute: toggle_fan_lid
+                  widgets:
+                    - label:
+                        text: ${icon_fan_lid}
                         text_font: font_mdi_fan
                         text_color: 0xFFFFFF
                         align: CENTER
