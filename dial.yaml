@@ -150,46 +150,16 @@ globals:
     initial_value: 'false'
 
 image:
+  # img_scene/img_light/img_ac/img_music/img_palette/img_brightness/
+  # img_dengguang were declared here but never referenced anywhere (each
+  # page declares its own distinctly-named icons instead) -- confirmed
+  # via grep before removal. logo_img is the boot-screen brand logo, not
+  # a conceptual icon, so it stays a PNG rather than becoming an MDI glyph.
   - file: src/assets/images/logo.png
     id: logo_img
     type: RGB565
     transparency: alpha_channel
     resize: 72x72
-  - file: src/assets/images/scene.png
-    id: img_scene
-    type: RGB565
-    transparency: alpha_channel
-    resize: 24x24
-  - file: src/assets/images/bulb.png
-    id: img_light
-    type: RGB565
-    transparency: alpha_channel
-    resize: 24x24
-  - file: src/assets/images/ac.png
-    id: img_ac
-    type: RGB565
-    transparency: alpha_channel
-    resize: 24x24
-  - file: src/assets/images/music.png
-    id: img_music
-    type: RGB565
-    transparency: alpha_channel
-    resize: 24x24
-  - file: src/assets/images/palette.png
-    id: img_palette
-    type: RGB565
-    transparency: alpha_channel
-    resize: 24x24
-  - file: src/assets/images/brightness.png
-    id: img_brightness
-    type: RGB565
-    transparency: alpha_channel
-    resize: 24x24
-  - file: src/assets/images/light.png
-    id: img_dengguang
-    type: RGB565
-    transparency: alpha_channel
-    resize: 24x24
 
 color:
   - id: col_bg
