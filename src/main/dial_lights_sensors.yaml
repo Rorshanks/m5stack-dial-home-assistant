@@ -7,6 +7,13 @@ text_sensor:
       - script.execute: menu_on_ha_update
 
   - platform: homeassistant
+    id: dial_light_kitchen2_state
+    entity_id: light.kitchen_lights_2
+    internal: true
+    on_value:
+      - script.execute: menu_on_ha_update
+
+  - platform: homeassistant
     id: dial_light_mesa_state
     entity_id: light.mesa
     internal: true
@@ -23,6 +30,12 @@ text_sensor:
   - platform: homeassistant
     id: dial_light_dummy_light_modes
     entity_id: light.dummy_light
+    attribute: supported_color_modes
+    internal: true
+
+  - platform: homeassistant
+    id: dial_light_kitchen2_modes
+    entity_id: light.kitchen_lights_2
     attribute: supported_color_modes
     internal: true
 
@@ -45,6 +58,12 @@ text_sensor:
     internal: true
 
   - platform: homeassistant
+    id: dial_light_kitchen2_rgb
+    entity_id: light.kitchen_lights_2
+    attribute: rgb_color
+    internal: true
+
+  - platform: homeassistant
     id: dial_light_mesa_rgb
     entity_id: light.mesa
     attribute: rgb_color
@@ -59,6 +78,12 @@ text_sensor:
   - platform: homeassistant
     id: dial_light_dummy_light_color_mode
     entity_id: light.dummy_light
+    attribute: color_mode
+    internal: true
+
+  - platform: homeassistant
+    id: dial_light_kitchen2_color_mode
+    entity_id: light.kitchen_lights_2
     attribute: color_mode
     internal: true
 
@@ -78,6 +103,14 @@ sensor:
   - platform: homeassistant
     id: dial_light_dummy_light_brightness
     entity_id: light.dummy_light
+    attribute: brightness
+    internal: true
+    on_value:
+      - script.execute: menu_on_ha_update
+
+  - platform: homeassistant
+    id: dial_light_kitchen2_brightness
+    entity_id: light.kitchen_lights_2
     attribute: brightness
     internal: true
     on_value:
@@ -106,6 +139,12 @@ sensor:
     internal: true
 
   - platform: homeassistant
+    id: dial_light_kitchen2_color_temp_kelvin
+    entity_id: light.kitchen_lights_2
+    attribute: color_temp_kelvin
+    internal: true
+
+  - platform: homeassistant
     id: dial_light_mesa_color_temp_kelvin
     entity_id: light.mesa
     attribute: color_temp_kelvin
@@ -124,6 +163,12 @@ sensor:
     internal: true
 
   - platform: homeassistant
+    id: dial_light_kitchen2_min_color_temp_kelvin
+    entity_id: light.kitchen_lights_2
+    attribute: min_color_temp_kelvin
+    internal: true
+
+  - platform: homeassistant
     id: dial_light_mesa_min_color_temp_kelvin
     entity_id: light.mesa
     attribute: min_color_temp_kelvin
@@ -138,6 +183,12 @@ sensor:
   - platform: homeassistant
     id: dial_light_dummy_light_max_color_temp_kelvin
     entity_id: light.dummy_light
+    attribute: max_color_temp_kelvin
+    internal: true
+
+  - platform: homeassistant
+    id: dial_light_kitchen2_max_color_temp_kelvin
+    entity_id: light.kitchen_lights_2
     attribute: max_color_temp_kelvin
     internal: true
 

@@ -37,7 +37,17 @@ dial_lights:
     color_temp_kelvin_sensor: dial_light_dummy_light_color_temp_kelvin
     min_color_temp_kelvin_sensor: dial_light_dummy_light_min_color_temp_kelvin
     max_color_temp_kelvin_sensor: dial_light_dummy_light_max_color_temp_kelvin
-  
+  - entity_id: light.kitchen_lights_2
+    name: Kitchen 2
+    state_sensor: dial_light_kitchen2_state
+    modes_sensor: dial_light_kitchen2_modes
+    brightness_sensor: dial_light_kitchen2_brightness
+    color_sensor: dial_light_kitchen2_rgb
+    color_mode_sensor: dial_light_kitchen2_color_mode
+    color_temp_kelvin_sensor: dial_light_kitchen2_color_temp_kelvin
+    min_color_temp_kelvin_sensor: dial_light_kitchen2_min_color_temp_kelvin
+    max_color_temp_kelvin_sensor: dial_light_kitchen2_max_color_temp_kelvin
+
 
 dial_switches:
       - entity_id: switch.dummy_switch
